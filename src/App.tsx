@@ -12,7 +12,7 @@ import { AudioControls } from './components/AudioControls';
 import { PlayerProgress, WorldConfig } from './types/game';
 import { DEFAULT_PROGRESS, WORLDS } from './services/mathEngine';
 import { soundManager } from './services/sound';
-import { sanitizeProgress, sanitizeName, recordWorldCompletion, unlockMascot } from './services/progress';
+import { sanitizeProgress, sanitizeName, recordWorldCompletion, unlockMascot, unlockAccessory } from './services/progress';
 import { applyDevEasterEgg } from './services/devEasterEgg';
 import confetti from 'canvas-confetti';
 
@@ -169,13 +169,7 @@ export default function App() {
 
   const handleUnlockAccessory = (hatId: string, cost: number) => {
     setProgress((prev) => {
-      if (cost < 0 || prev.gems < cost || prev.unlockedAccessories.includes(hatId)) return prev;
-      return {
-        ...prev,
-        gems: prev.gems - cost,
-        unlockedAccessories: [...prev.unlockedAccessories, hatId],
-        selectedHat: hatId,
-      };
+      return unlockAccessory(prev, hatId, cost);
     });
   };
 

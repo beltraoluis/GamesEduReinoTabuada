@@ -1,12 +1,104 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Sparkles, Check, Lock, Edit3 } from 'lucide-react';
+import { ArrowLeft, Edit3 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { MASCOT_LIST, ACCESSORY_HATS, WORLDS } from '../services/mathEngine';
 import { meetsUnlockRequirement } from '../services/progress';
 import { MascotBadge } from './MascotBadge';
+import { WardrobeActionButton, type WardrobeItemState } from './WardrobeActionButton';
 import { soundManager } from '../services/sound';
 import { containsProfanity, PROFANITY_MESSAGE } from '../services/profanity';
 import confetti from 'canvas-confetti';
+
+function getWardrobeItemState({
+  isUnlocked,
+  isSelected,
+  requirementMet,
+  canAfford,
+}: {
+  isUnlocked: boolean;
+  isSelected: boolean;
+  requirementMet: boolean;
+  canAfford: boolean;
+}): WardrobeItemState {
+  if (isUnlocked) return isSelected ? 'selected' : 'owned';
+  if (!requirementMet) return 'requirement_locked';
+  return canAfford ? 'buyable' : 'unaffordable';
+}
+
+interface WardrobeItemCardProps {
+  name: string;
+  alt: string;
+  emoji: string;
+  image?: string;
+  state: WardrobeItemState;
+  cost: number;
+  selectedLabel: string;
+  ownedLabel: string;
+  completedWorldCount: number;
+  totalWorlds: number;
+  onAction: () => void;
+}
+
+const WardrobeItemCard: React.FC<WardrobeItemCardProps> = ({
+  name,
+  alt,
+  emoji,
+  image,
+  state,
+  cost,
+  selectedLabel,
+  ownedLabel,
+  completedWorldCount,
+  totalWorlds,
+  onAction,
+}) => {
+  const isSelected = state === 'selected';
+
+  return (
+    <div
+      className={`p-3 rounded-2xl border-2 flex flex-col items-center text-center h-full transition-all ${
+        isSelected
+          ? 'border-amber-500 bg-amber-50/80 shadow-md ring-2 ring-amber-300'
+          : 'border-slate-200 bg-white hover:border-amber-200'
+      }`}
+    >
+      <div className="w-12 h-12 mb-1.5 flex items-center justify-center leading-none shrink-0">
+        {image ? (
+          <img
+            src={image}
+            alt={alt}
+            draggable={false}
+            className="w-10 h-10 object-contain select-none"
+          />
+        ) : (
+          <span className="text-4xl leading-none select-none" aria-hidden="true">
+            {emoji}
+          </span>
+        )}
+      </div>
+      <span className="text-xs font-bold text-slate-800 line-clamp-1">{name}</span>
+      <div className="min-h-[2rem] mt-1 mb-2 flex items-center justify-center">
+        {state === 'requirement_locked' ? (
+          <span className="text-[10px] leading-tight font-bold text-amber-700 tabular-nums">
+            🔒 Conclua os {totalWorlds} reinos · {completedWorldCount}/{totalWorlds}
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-auto w-full">
+        <WardrobeActionButton
+          state={state}
+          itemName={name}
+          cost={cost}
+          selectedLabel={selectedLabel}
+          ownedLabel={ownedLabel}
+          completedWorldCount={completedWorldCount}
+          totalWorlds={totalWorlds}
+          onClick={onAction}
+        />
+      </div>
+    </div>
+  );
+};
 
 interface MascotWardrobeProps {
   playerName: string;
@@ -79,23 +171,34 @@ export const MascotWardrobe: React.FC<MascotWardrobeProps> = ({
     setEditingName(false);
   };
 
-  const handleUnlockMascot = (id: string, cost: number) => {
+  const handleUnlock = (
+    id: string,
+    cost: number,
+    onUnlock: (itemId: string, itemCost: number) => void
+  ) => {
     if (gems >= cost) {
       soundManager.playCorrect();
       confetti({ particleCount: 40, spread: 60 });
-      onUnlockMascot(id, cost);
+      onUnlock(id, cost);
     } else {
       soundManager.playWrong();
     }
   };
 
-  const handleUnlockHat = (id: string, cost: number) => {
-    if (gems >= cost) {
-      soundManager.playCorrect();
-      confetti({ particleCount: 40, spread: 60 });
-      onUnlockAccessory(id, cost);
-    } else {
+  const handleCardAction = (
+    state: WardrobeItemState,
+    id: string,
+    cost: number,
+    onSelect: (itemId: string) => void,
+    onUnlock: (itemId: string, itemCost: number) => void
+  ) => {
+    if (state === 'selected' || state === 'owned') {
+      soundManager.playBloop(450);
+      onSelect(id);
+    } else if (state === 'requirement_locked') {
       soundManager.playWrong();
+    } else {
+      handleUnlock(id, cost, onUnlock);
     }
   };
 
@@ -246,82 +349,31 @@ export const MascotWardrobe: React.FC<MascotWardrobeProps> = ({
             const isUnlocked = unlockedMascots.includes(m.id);
             const isSelected = selectedMascot === m.id;
             const requirementMet = meetsUnlockRequirement(m, { completedLevels });
-            const canAfford = gems >= m.cost;
+            const state = getWardrobeItemState({
+              isUnlocked,
+              isSelected,
+              requirementMet,
+              canAfford: gems >= m.cost,
+            });
             const shortName = m.name.split(',')[0];
 
             return (
-              <div
+              <WardrobeItemCard
                 key={m.id}
-                className={`p-3 rounded-2xl border-2 flex flex-col items-center text-center transition-all ${
-                  isSelected
-                    ? 'border-amber-500 bg-amber-50/80 shadow-md ring-2 ring-amber-300'
-                    : 'border-slate-200 bg-white hover:border-amber-200'
-                }`}
-              >
-                <span className="text-4xl mb-1 flex items-center justify-center leading-none">
-                  {m.image ? (
-                    <img
-                      src={m.image}
-                      alt={m.name}
-                      draggable={false}
-                      className="w-[1.15em] h-[1.15em] object-contain select-none"
-                    />
-                  ) : (
-                    m.emoji
-                  )}
-                </span>
-                <span className="text-xs font-bold text-slate-800 line-clamp-1">{shortName}</span>
-
-                {isUnlocked ? (
-                  <button
-                    onClick={() => {
-                      soundManager.playBloop(450);
-                      onSelectMascot(m.id);
-                    }}
-                    className={`mt-2 w-full min-h-[44px] py-2 text-xs font-black rounded-lg transition-all ${
-                      isSelected
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {isSelected ? 'Escolhido' : 'Escolher'}
-                  </button>
-                ) : !requirementMet ? (
-                  <div className="mt-2 w-full flex flex-col items-center gap-1">
-                    <button
-                      type="button"
-                      aria-disabled="true"
-                      aria-label={`${shortName} bloqueado. Conclua todos os ${totalWorlds} reinos da corrida (${completedWorldCount} de ${totalWorlds} concluídos). Preço: ${m.cost} gemas.`}
-                      onClick={() => soundManager.playWrong()}
-                      className="w-full min-h-[44px] px-2 py-1.5 text-[11px] leading-tight font-black rounded-lg bg-slate-100 text-slate-600 border border-slate-300 flex flex-col items-center justify-center gap-0.5 cursor-not-allowed"
-                    >
-                      <span>🔒 Conclua todos os {totalWorlds} reinos da corrida!</span>
-                      <span className="text-[10px] font-bold text-amber-700">
-                        {completedWorldCount}/{totalWorlds} reinos · {m.cost} 💎
-                      </span>
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    aria-disabled={!canAfford}
-                    aria-label={
-                      canAfford
-                        ? `Desbloquear ${shortName} por ${m.cost} gemas`
-                        : `${shortName} custa ${m.cost} gemas. Gemas insuficientes.`
-                    }
-                    onClick={() => handleUnlockMascot(m.id, m.cost)}
-                    className={`mt-2 w-full min-h-[44px] py-2 text-xs font-black rounded-lg flex items-center justify-center gap-1 transition-colors ${
-                      canAfford
-                        ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                        : 'bg-slate-200 hover:bg-slate-300 text-slate-600 cursor-not-allowed'
-                    }`}
-                  >
-                    <Lock className="w-3 h-3" />
-                    <span>{m.cost} 💎</span>
-                  </button>
-                )}
-              </div>
+                name={shortName}
+                alt={m.name}
+                emoji={m.emoji}
+                image={m.image}
+                state={state}
+                cost={m.cost}
+                selectedLabel="Escolhido"
+                ownedLabel="Escolher"
+                completedWorldCount={completedWorldCount}
+                totalWorlds={totalWorlds}
+                onAction={() =>
+                  handleCardAction(state, m.id, m.cost, onSelectMascot, onUnlockMascot)
+                }
+              />
             );
           })}
         </div>
@@ -332,56 +384,35 @@ export const MascotWardrobe: React.FC<MascotWardrobeProps> = ({
         <h3 className="text-base font-black font-fun text-slate-800 mb-3 flex items-center gap-2">
           <span>🎩 Chapéus & Acessórios</span>
         </h3>
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
           {ACCESSORY_HATS.map((hat) => {
             const isUnlocked = unlockedAccessories.includes(hat.id);
             const isSelected = selectedHat === hat.id;
+            const requirementMet = meetsUnlockRequirement(hat, { completedLevels });
+            const state = getWardrobeItemState({
+              isUnlocked,
+              isSelected,
+              requirementMet,
+              canAfford: gems >= hat.cost,
+            });
 
             return (
-              <div
+              <WardrobeItemCard
                 key={hat.id}
-                className={`p-3 rounded-2xl border-2 flex flex-col items-center text-center transition-all ${
-                  isSelected
-                    ? 'border-indigo-500 bg-indigo-50/80 shadow-md ring-2 ring-indigo-300'
-                    : 'border-slate-200 bg-white hover:border-indigo-200'
-                }`}
-              >
-                {hat.image ? (
-                  <img
-                    src={hat.image}
-                    alt={hat.name}
-                    draggable={false}
-                    className="w-9 h-9 object-contain mb-1 select-none"
-                  />
-                ) : (
-                  <span className="text-3xl mb-1">{hat.emoji}</span>
-                )}
-                <span className="text-xs font-bold text-slate-800 line-clamp-1">{hat.name}</span>
-
-                {isUnlocked ? (
-                  <button
-                    onClick={() => {
-                      soundManager.playBloop(450);
-                      onSelectHat(hat.id);
-                    }}
-                    className={`mt-2 w-full py-1 text-xs font-black rounded-lg transition-all ${
-                      isSelected
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {isSelected ? 'Usando' : 'Equipar'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleUnlockHat(hat.id, hat.cost)}
-                    className="mt-2 w-full py-1 text-xs font-black rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center gap-1"
-                  >
-                    <Lock className="w-3 h-3" />
-                    <span>{hat.cost} 💎</span>
-                  </button>
-                )}
-              </div>
+                name={hat.name}
+                alt={hat.name}
+                emoji={hat.emoji}
+                image={hat.image}
+                state={state}
+                cost={hat.cost}
+                selectedLabel="Equipado"
+                ownedLabel="Equipar"
+                completedWorldCount={completedWorldCount}
+                totalWorlds={totalWorlds}
+                onAction={() =>
+                  handleCardAction(state, hat.id, hat.cost, onSelectHat, onUnlockAccessory)
+                }
+              />
             );
           })}
         </div>

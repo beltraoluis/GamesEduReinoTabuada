@@ -51,6 +51,7 @@ export interface MascotSkin {
 }
 
 export interface MascotAccessory {
+  requiresAllWorlds?: boolean;
   id: string;
   name: string;
   type: 'hat' | 'cape' | 'glasses';

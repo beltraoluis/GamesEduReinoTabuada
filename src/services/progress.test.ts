@@ -346,8 +346,8 @@ describe('player name profanity protection', () => {
 });
 
 // These same pure handlers are called by App's runner/wardrobe state updaters.
-import { allWorldsCompleted, meetsUnlockRequirement, recordWorldCompletion, unlockMascot } from './progress';
-import { MASCOT_LIST } from './gameData';
+import { allWorldsCompleted, meetsUnlockRequirement, recordWorldCompletion, unlockMascot, unlockAccessory } from './progress';
+import { ACCESSORY_HATS, MASCOT_LIST } from './gameData';
 import { WORLDS } from './mathEngine';
 
 describe('runner completion and gated mascot purchases', () => {
@@ -401,5 +401,60 @@ describe('runner completion and gated mascot purchases', () => {
     const legacy = { ...rich, completedLevels: Object.fromEntries(WORLDS.map(w => [`${w.id}_0`, 3])) };
     expect(allWorldsCompleted(legacy)).toBe(false);
     expect(allWorldsCompleted({ completedLevels: { 'world-1': NaN } })).toBe(false);
+  });
+});
+
+
+describe('accessory purchases', () => {
+  const crown = ACCESSORY_HATS.find(item => item.id === 'crown')!;
+  const rich = { ...DEFAULT_PROGRESS, gems: 10000 };
+  const completed = { ...rich, gems: 1000, completedLevels: Object.fromEntries(WORLDS.map(w => [w.id, 1])) };
+
+  it('requires every canonical realm even when gems suffice', () => {
+    expect(unlockAccessory(rich, crown.id, crown.cost)).toBe(rich);
+    for (const world of WORLDS) {
+      const partial = { ...completed, completedLevels: { ...completed.completedLevels, [world.id]: 0 } };
+      expect(unlockAccessory(partial, crown.id, crown.cost)).toBe(partial);
+    }
+    const legacy = { ...rich, completedLevels: Object.fromEntries(WORLDS.map(w => [`${w.id}_0`, 3])) };
+    expect(unlockAccessory(legacy, crown.id, crown.cost)).toBe(legacy);
+  });
+
+  it('spends the exact balance and unlocks and selects the crown exactly once', () => {
+    const bought = unlockAccessory(completed, crown.id, crown.cost);
+    expect(bought.gems).toBe(0);
+    expect(bought.selectedHat).toBe(crown.id);
+    expect(bought.unlockedAccessories).toEqual([...completed.unlockedAccessories, crown.id]);
+    expect(completed.unlockedAccessories).not.toContain(crown.id);
+    const richDuplicate = { ...bought, gems: 10000 };
+    expect(unlockAccessory(richDuplicate, crown.id, crown.cost)).toBe(richDuplicate);
+  });
+
+  it('rejects insufficient gems, forged prices, unknown and legacy accessory ids', () => {
+    const poor = { ...completed, gems: crown.cost - 1 };
+    expect(unlockAccessory(poor, crown.id, crown.cost)).toBe(poor);
+    for (const cost of [0, 390, 999, 1001, -1, NaN, Infinity]) {
+      expect(unlockAccessory(completed, crown.id, cost)).toBe(completed);
+    }
+    expect(unlockAccessory(rich, 'unknown', 0)).toBe(rich);
+    expect(unlockAccessory(rich, 'headphones', 290)).toBe(rich);
+  });
+
+  it('keeps ordinary hats available without realm completion at canonical prices', () => {
+    for (const [id, cost] of Object.entries({ cap: 80, flower: 80, wizard: 190, sunglasses: 290 })) {
+      const bought = unlockAccessory({ ...rich, gems: cost }, id, cost);
+      expect(bought.gems).toBe(0);
+      expect(bought.selectedHat).toBe(id);
+      expect(bought.unlockedAccessories).toContain(id);
+      expect(unlockAccessory(rich, id, 0)).toBe(rich);
+    }
+  });
+
+  it('preserves previously unlocked crowns and migrates legacy accessories on load', () => {
+    const loaded = sanitizeProgress({ ...rich, selectedHat: 'crown', unlockedAccessories: ['none', 'crown', 'headphones'] });
+    expect(loaded.selectedHat).toBe('crown');
+    expect(loaded.unlockedAccessories).toEqual(['none', 'crown', 'sunglasses']);
+    expect(allWorldsCompleted(loaded)).toBe(false);
+    expect(unlockAccessory(loaded, crown.id, crown.cost)).toBe(loaded);
   });
 });

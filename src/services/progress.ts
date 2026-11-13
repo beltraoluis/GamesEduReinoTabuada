@@ -109,3 +109,12 @@ export function unlockMascot(progress: PlayerProgress, mascotId: string, cost: n
   return { ...progress, gems: progress.gems - item.cost,
     unlockedMascots: [...progress.unlockedMascots, mascotId], selectedMascot: mascotId };
 }
+
+/** Accessories use the same canonical price and realm gate as mascot purchases. */
+export function unlockAccessory(progress: PlayerProgress, hatId: string, cost: number): PlayerProgress {
+  const item = ACCESSORY_HATS.find(({ id }) => id === hatId);
+  if (!item || cost !== item.cost || progress.gems < item.cost || progress.unlockedAccessories.includes(hatId)
+    || !meetsUnlockRequirement(item, progress)) return progress;
+  return { ...progress, gems: progress.gems - item.cost,
+    unlockedAccessories: [...progress.unlockedAccessories, hatId], selectedHat: hatId };
+}
