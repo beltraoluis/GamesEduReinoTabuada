@@ -94,7 +94,7 @@ export const WardrobeActionButton: React.FC<WardrobeActionButtonProps> = ({
           : 'bg-slate-200 hover:bg-slate-300 text-slate-600 cursor-not-allowed'
       }`}
     >
-      <Lock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+      {!canAfford && <Lock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />}
       <span className="tabular-nums">{cost} 💎</span>
     </button>
   );
