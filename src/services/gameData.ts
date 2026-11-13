@@ -18,7 +18,7 @@ export const ACCESSORY_HATS: MascotAccessory[] = [
   { id: 'crown', name: 'Coroa Dourada Real', type: 'hat', emoji: '👑', cost: 200, unlocked: false },
   { id: 'cap', name: 'Boné Radical', type: 'hat', emoji: '🧢', cost: 80, unlocked: false },
   { id: 'sunglasses', name: 'Óculos Escuros Maneiros', type: 'glasses', emoji: '🕶️', image: sunglassesImg, cost: 150, unlocked: false },
-  { id: 'flower', name: 'Florzinha Encantada', type: 'hat', emoji: '🌸', cost: 50, unlocked: false },
+  { id: 'flower', name: 'Florzinha Encantada', type: 'hat', emoji: '🌸', cost: 80, unlocked: false },
 ];
 
 export const DEFAULT_PROGRESS: {
