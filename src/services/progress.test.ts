@@ -310,3 +310,19 @@ describe('sanitizeName', () => {
     }
   });
 });
+
+describe('player name profanity protection', () => {
+  it.each(['puta', 'p.u.t.a', 'p u t a', 'c@r@lh0', 'puuuta', 'mérda', 'p\u0000uta', 'Lucasputa', 'ｐｕｔａ', 'рutа', 'p1u1t1a', 'Maria Cu', 'Ana Pau', 'Lucas_cu', 'Lucas p u t a', 'p😀u😀t😀a', 'Lucasfdp', 'Lucascu', 'cuLucas', 'f d p', 'c u', 'Hansscheisse', 'Lucascazzo', 'Lucasfuck', 'Ro La', 'Ana L A', 'Cu Lo', 'Fu Ck', 'f1d1p', 'c2u', 'f*ck', '8itch', 'ca22o', 'f|ck', 'Dick', 'Fick', 'finocchio', 'deficiente', 'handicappato', 'behindert', 'negro', 'sl8t', 'cuLucas', 'Lucaspau'])('replaces offensive saved name %s', (name) => {
+    expect(sanitizeName(name)).toBe(DEFAULT_PROGRESS.playerName);
+    expect(sanitizeProgress({ playerName: name }).playerName).toBe(DEFAULT_PROGRESS.playerName);
+  });
+
+  it.each(['Lucas', 'Cauã', 'Cássia', 'Assis', 'Analu', 'João Pedro', 'Computador', 'Ana L.', 'Ana 1', 'A 55', 'Computador123', 'Deputada1', 'Jürgen', 'Müller', 'Annalisa', 'Analena', 'Dickens', 'Cockburn', 'Pussycat', 'Ana Lu', 'Ana Lu Maria', 'Ro L', 'Paulinho', 'Paul2', 'Cunha', 'Assunção', 'Hitchcock', 'Cazzola', 'Cálculo', 'Cueca', 'Carvalho', 'Carvalhal', 'Paulino', 'Assunta', 'Cazzolato', 'Rolla', 'Ana1'])('preserves innocent saved name %s', (name) => {
+    expect(sanitizeName(name)).toBe(name);
+    expect(sanitizeProgress({ playerName: name }).playerName).toBe(name);
+  });
+
+  it('checks the final cleaned name after truncating', () => {
+    expect(sanitizeName(' '.repeat(3) + 'a'.repeat(15) + ' putaZ')).toBe(DEFAULT_PROGRESS.playerName);
+  });
+});

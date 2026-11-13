@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Sparkles, Check, Lock, Edit3 } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { MASCOT_LIST, ACCESSORY_HATS } from '../services/mathEngine';
 import { MascotBadge } from './MascotBadge';
 import { soundManager } from '../services/sound';
+import { containsProfanity, PROFANITY_MESSAGE } from '../services/profanity';
 import confetti from 'canvas-confetti';
 
 interface MascotWardrobeProps {
@@ -36,13 +38,41 @@ export const MascotWardrobe: React.FC<MascotWardrobeProps> = ({
 }) => {
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState(playerName);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [shakeCount, setShakeCount] = useState(0);
+  const editButtonRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const shouldRestoreFocusRef = useRef(false);
+
+  useEffect(() => {
+    if (!editingName && shouldRestoreFocusRef.current) {
+      shouldRestoreFocusRef.current = false;
+      editButtonRef.current?.focus();
+    }
+  }, [editingName]);
 
   const handleSaveName = (e: React.FormEvent) => {
     e.preventDefault();
+    if (containsProfanity(tempName)) {
+      setNameError(PROFANITY_MESSAGE);
+      setShakeCount((prev) => prev + 1);
+      soundManager.playWrong();
+      inputRef.current?.focus();
+      return;
+    }
     if (tempName.trim()) {
       onUpdateName(tempName.trim());
       soundManager.playBloop(550);
     }
+    setNameError(null);
+    shouldRestoreFocusRef.current = true;
+    setEditingName(false);
+  };
+
+  const handleCancelName = () => {
+    setTempName(playerName);
+    setNameError(null);
+    shouldRestoreFocusRef.current = true;
     setEditingName(false);
   };
 
@@ -97,31 +127,93 @@ export const MascotWardrobe: React.FC<MascotWardrobeProps> = ({
         </div>
 
         <div className="flex flex-col items-center sm:items-start">
-          <span className="text-xs font-black uppercase text-slate-500">Nome do Aluno(a):</span>
           {editingName ? (
-            <form onSubmit={handleSaveName} className="flex items-center gap-2 mt-1">
-              <input
-                type="text"
-                maxLength={20}
-                value={tempName}
-                onChange={(e) => setTempName(e.target.value)}
-                className="bg-white border-2 border-amber-400 rounded-xl px-3 py-1 font-bold text-slate-800 focus:outline-none"
-                autoFocus
-              />
-              <button
-                type="submit"
-                className="bg-emerald-500 text-white p-1.5 rounded-xl font-bold hover:bg-emerald-600"
-              >
-                Salvar
-              </button>
+            <label htmlFor="player-name-input" className="text-xs font-black uppercase text-slate-500">
+              Nome do Aluno(a):
+            </label>
+          ) : (
+            <span className="text-xs font-black uppercase text-slate-500">
+              Nome do Aluno(a):
+            </span>
+          )}
+          {editingName ? (
+            <form onSubmit={handleSaveName} className="flex flex-col gap-2 mt-1 w-full max-w-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  ref={inputRef}
+                  id="player-name-input"
+                  type="text"
+                  maxLength={20}
+                  value={tempName}
+                  onChange={(e) => {
+                    setTempName(e.target.value);
+                    if (nameError) setNameError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      handleCancelName();
+                    }
+                  }}
+                  aria-invalid={Boolean(nameError)}
+                  aria-describedby={nameError ? 'name-profanity-error' : undefined}
+                  className={`flex-1 min-w-[160px] min-h-[44px] bg-white border-2 ${
+                    nameError ? 'border-rose-400' : 'border-amber-400'
+                  } rounded-xl px-3.5 py-2 font-bold text-slate-800 focus:outline-none`}
+                  autoFocus
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    className="min-h-[44px] px-4 py-2 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 active:scale-95 transition-transform"
+                  >
+                    Salvar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelName}
+                    className="min-h-[44px] px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-300 active:scale-95 transition-transform"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+              <AnimatePresence mode="wait">
+                {nameError && (
+                  <motion.div
+                    id="name-profanity-error"
+                    role="alert"
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <motion.div
+                      key={shakeCount}
+                      animate={{ x: [0, -6, 6, -4, 4, 0] }}
+                      transition={{ duration: 0.35 }}
+                      className="flex items-start gap-2 rounded-2xl border-2 border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm font-bold text-rose-800 shadow-sm"
+                    >
+                      <span aria-hidden="true" className="text-base leading-snug shrink-0">💛</span>
+                      <span>{nameError}</span>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </form>
           ) : (
             <div className="flex items-center gap-2 mt-1">
               <span className="text-2xl font-black font-fun text-slate-900">{playerName}</span>
               <button
-                onClick={() => setEditingName(true)}
-                className="p-1 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-amber-100"
+                ref={editButtonRef}
+                onClick={() => {
+                  setTempName(playerName);
+                  setNameError(null);
+                  setEditingName(true);
+                }}
+                className="min-h-[40px] min-w-[40px] flex items-center justify-center p-2 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-amber-100"
                 title="Mudar meu nome"
+                aria-label="Mudar meu nome"
               >
                 <Edit3 className="w-4 h-4" />
               </button>

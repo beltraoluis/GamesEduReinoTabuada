@@ -1,3 +1,4 @@
+import { containsProfanity } from './profanity';
 import type { PlayerProgress } from '../types/game';
 import { ACCESSORY_HATS, ACHIEVEMENTS_LIST, DEFAULT_PROGRESS, MASCOT_LIST } from './gameData';
 
@@ -10,7 +11,7 @@ export function sanitizeName(raw: unknown): string {
   if (typeof raw !== 'string') return DEFAULT_PROGRESS.playerName;
   // eslint-disable-next-line no-control-regex
   const cleaned = raw.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, MAX_NAME_LENGTH).trim();
-  return cleaned || DEFAULT_PROGRESS.playerName;
+  return cleaned && !containsProfanity(cleaned) ? cleaned : DEFAULT_PROGRESS.playerName;
 }
 
 const clampInt = (v: unknown, fallback: number): number => {
