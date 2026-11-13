@@ -26,11 +26,25 @@ export const MascotBadge: React.FC<MascotBadgeProps> = ({
     xl: 'w-32 h-32 text-6xl',
   };
 
-  const hatSizeClasses = {
-    sm: 'text-sm -top-2',
-    md: 'text-xl -top-3',
-    lg: 'text-3xl -top-5',
-    xl: 'text-4xl -top-6',
+  const hatPositionClasses = {
+    sm: 'bottom-[58%]',
+    md: 'bottom-[60%]',
+    lg: 'bottom-[60%]',
+    xl: 'bottom-[60%]',
+  };
+
+  const hatEmojiSizeClasses = {
+    sm: 'text-sm',
+    md: 'text-xl',
+    lg: 'text-3xl',
+    xl: 'text-4xl',
+  };
+
+  const hatImageSizeClasses = {
+    sm: 'w-5 h-5',
+    md: 'w-8 h-8',
+    lg: 'w-11 h-11',
+    xl: 'w-12 h-12',
   };
 
   return (
@@ -42,13 +56,22 @@ export const MascotBadge: React.FC<MascotBadgeProps> = ({
       >
         {/* Accessory Hat */}
         {hat && (
-          <span
-            className={`absolute z-10 filter drop-shadow ${hatSizeClasses[size]}`}
-            role="img"
-            aria-label={hat.name}
-          >
-            {hat.emoji}
-          </span>
+          hat.image ? (
+            <img
+              src={hat.image}
+              alt={hat.name}
+              draggable={false}
+              className={`absolute left-1/2 -translate-x-1/2 z-10 pointer-events-none select-none object-contain filter drop-shadow ${hatPositionClasses[size]} ${hatImageSizeClasses[size]}`}
+            />
+          ) : (
+            <span
+              className={`absolute left-1/2 -translate-x-1/2 z-10 pointer-events-none select-none leading-none filter drop-shadow ${hatPositionClasses[size]} ${hatEmojiSizeClasses[size]}`}
+              role="img"
+              aria-label={hat.name}
+            >
+              {hat.emoji}
+            </span>
+          )
         )}
 
         {/* Mascot Face */}

@@ -295,7 +295,16 @@ export const MascotWardrobe: React.FC<MascotWardrobeProps> = ({
                     : 'border-slate-200 bg-white hover:border-indigo-200'
                 }`}
               >
-                <span className="text-3xl mb-1">{hat.emoji}</span>
+                {hat.image ? (
+                  <img
+                    src={hat.image}
+                    alt={hat.name}
+                    draggable={false}
+                    className="w-9 h-9 object-contain mb-1 select-none"
+                  />
+                ) : (
+                  <span className="text-3xl mb-1">{hat.emoji}</span>
+                )}
                 <span className="text-xs font-bold text-slate-800 line-clamp-1">{hat.name}</span>
 
                 {isUnlocked ? (

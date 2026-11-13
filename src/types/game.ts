@@ -53,6 +53,7 @@ export interface MascotAccessory {
   name: string;
   type: 'hat' | 'cape' | 'glasses';
   emoji: string;
+  image?: string;
   cost: number;
   unlocked: boolean;
 }

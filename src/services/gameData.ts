@@ -1,3 +1,5 @@
+import wizardHatImg from '../assets/hats/wizard-hat.svg';
+
 export const MASCOT_LIST = [
   { id: 'pip', name: 'Pip, o Esquilo Feiticeiro', emoji: '🐿️', color: 'bg-amber-100 border-amber-400 text-amber-900', unlocked: true, cost: 0 },
   { id: 'lunna', name: 'Lunna, a Raposinha Estelar', emoji: '🦊', color: 'bg-orange-100 border-orange-400 text-orange-900', unlocked: true, cost: 0 },
@@ -6,9 +8,16 @@ export const MASCOT_LIST = [
   { id: 'estrela', name: 'Gatito, o Mago Cósmico', emoji: '🐱', color: 'bg-indigo-100 border-indigo-400 text-indigo-900', unlocked: false, cost: 40 },
 ];
 
-export const ACCESSORY_HATS = [
+export const ACCESSORY_HATS: Array<{
+  id: string;
+  name: string;
+  emoji: string;
+  image?: string;
+  cost: number;
+  unlocked: boolean;
+}> = [
   { id: 'none', name: 'Sem Chapéu', emoji: '✖️', cost: 0, unlocked: true },
-  { id: 'wizard', name: 'Chapéu Mágico de Estrelas', emoji: '🧙‍♂️', cost: 10, unlocked: false },
+  { id: 'wizard', name: 'Chapéu Mágico de Estrelas', emoji: '🧙‍♂️', image: wizardHatImg, cost: 10, unlocked: false },
   { id: 'crown', name: 'Coroa Dourada Real', emoji: '👑', cost: 20, unlocked: false },
   { id: 'cap', name: 'Boné Radical', emoji: '🧢', cost: 8, unlocked: false },
   { id: 'headphones', name: 'Fones de Ouvido Gamer', emoji: '🎧', cost: 15, unlocked: false },
