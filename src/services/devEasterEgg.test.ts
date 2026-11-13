@@ -80,3 +80,12 @@ it('yoda bypasses the all-worlds purchase gate and reset clears completions and 
   expect(reset.completedLevels).toEqual({});
   expect(reset.unlockedMascots).not.toContain('estrela');
 });
+
+it('yoda unlocks the Tower and reset restores its independent defaults', () => {
+  const unlocked = applyDevEasterEgg(withName('yoda'));
+  expect(unlocked.challenge.unlocked).toBe(true);
+  expect(unlocked.gems).toBe(DEFAULT_PROGRESS.gems);
+  const reset = applyDevEasterEgg({ ...unlocked, playerName: 'reset' });
+  expect(reset.challenge).toEqual(DEFAULT_PROGRESS.challenge);
+  expect(reset.challenge).not.toBe(DEFAULT_PROGRESS.challenge);
+});

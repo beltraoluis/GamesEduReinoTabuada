@@ -44,6 +44,7 @@ const FIELDS = [
 ] as const;
 
 const VALID = {
+  challenge: structuredClone(DEFAULT_PROGRESS.challenge),
   playerName: 'Maria',
   stars: 42,
   gems: 7,
@@ -457,4 +458,58 @@ describe('accessory purchases', () => {
     expect(allWorldsCompleted(loaded)).toBe(false);
     expect(unlockAccessory(loaded, crown.id, crown.cost)).toBe(loaded);
   });
+});
+
+import { canBuyChallenge, purchaseChallenge, recordChallengeResult, bestChallengeTitle, isChallengeAvailable } from './progress';
+
+import { summarizeChallenge } from './challengeEngine';
+
+describe('isolated challenge progress', () => {
+  const ready = () => ({ ...structuredClone(DEFAULT_PROGRESS), stars: 45, gems: 2500,
+    completedLevels: Object.fromEntries(WORLDS.map(w => [w.id, 3])) });
+  it('requires all five canonical realms and 2000 gems, spends once', () => {
+    const input = ready();
+    expect(isChallengeAvailable(input)).toBe(true);
+    expect(canBuyChallenge(input)).toBe(true);
+    const bought = purchaseChallenge(input);
+    expect(bought.gems).toBe(500);
+    expect(bought.challenge.unlocked).toBe(true);
+    expect(bought.stars).toBe(input.stars);
+    expect(bought.completedLevels).toBe(input.completedLevels);
+    expect(bought.unlockedAchievements).toBe(input.unlockedAchievements);
+    expect(purchaseChallenge(bought)).toBe(bought);
+    for (const locked of [{ ...input, gems: 1999 }, { ...input, completedLevels: {} },
+      { ...input, completedLevels: { ...input.completedLevels, 'world-5': 0 } }]) {
+      expect(purchaseChallenge(locked)).toBe(locked);
+    }
+  });
+  it('records attempts, score, streak and only upgrades medals without any economy mutation', () => {
+    const input = purchaseChallenge(ready());
+    const gold = summarizeChallenge({ correct: 24, wrong: 0, timeouts: 0, score: 5000, bestStreak: 24, durationSec: 50 });
+    const result = recordChallengeResult(input, gold);
+    for (const key of ['stars', 'gems', 'completedLevels', 'unlockedAchievements'] as const) expect(result[key]).toBe(input[key]);
+    expect(input.challenge.attempts).toBe(0);
+    expect(result.challenge).toEqual({ ...input.challenge, attempts: 1, bestScore: 5000, bestStreak: 24, bestMedal: 'gold' });
+    const replay = recordChallengeResult(result, { ...gold, score: 10, bestStreak: 1, correct: 22, wrong: 2, medal: 'bronze' });
+    expect(replay.challenge.bestMedal).toBe('gold');
+    expect(replay.challenge.bestScore).toBe(5000);
+    expect(replay.challenge.bestStreak).toBe(24);
+    expect(replay.challenge.attempts).toBe(2);
+    expect(bestChallengeTitle(replay)).toBe('Mestre da Torre');
+    expect(bestChallengeTitle(input)).toBeNull();
+  });
+  it('migrates missing fields and clamps hostile fields while retaining an actual saved boolean', () => {
+    expect(sanitizeProgress({}).challenge).toEqual(DEFAULT_PROGRESS.challenge);
+    for (const challenge of [null, [], true, 'gold', 9]) expect(sanitizeProgress({ challenge }).challenge).toEqual(DEFAULT_PROGRESS.challenge);
+    expect(sanitizeProgress({ challenge: { unlocked: 'true', attempts: -2, bestScore: Infinity, bestStreak: 999, bestMedal: '__proto__' } }).challenge)
+      .toEqual({ unlocked: false, attempts: 0, bestScore: 0, bestStreak: 24, bestMedal: 'none' });
+    expect(sanitizeProgress({ challenge: { unlocked: true, attempts: 2.9, bestScore: 1e12, bestStreak: '4', bestMedal: 'silver' } }).challenge)
+      .toEqual({ unlocked: true, attempts: 2, bestScore: 1000000, bestStreak: 0, bestMedal: 'silver' });
+  });
+});
+
+it('refuses to record a challenge before its permanent unlock', () => {
+  const locked = structuredClone(DEFAULT_PROGRESS);
+  const result = summarizeChallenge({ correct: 24, wrong: 0, timeouts: 0, score: 5000, bestStreak: 24, durationSec: 90 });
+  expect(recordChallengeResult(locked, result)).toBe(locked);
 });

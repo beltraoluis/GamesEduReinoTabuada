@@ -1,6 +1,8 @@
+import { CHALLENGE_PRICE, CHALLENGE_TOTAL_QUESTIONS, CHALLENGE_LIVES } from './challengeConfig';
+import { computeChallengeMedal } from './challengeEngine';
 import { containsProfanity } from './profanity';
 import { WORLDS } from './mathEngine';
-import type { MascotSkin, PlayerProgress } from '../types/game';
+import type { MascotSkin, PlayerProgress, ChallengeMedal, ChallengeResult } from '../types/game';
 import { ACCESSORY_HATS, ACHIEVEMENTS_LIST, DEFAULT_PROGRESS, MASCOT_LIST } from './gameData';
 
 export const MAX_NAME_LENGTH = 20;
@@ -68,7 +70,17 @@ export function sanitizeProgress(raw: unknown): PlayerProgress {
       ? migratedHat
       : DEFAULT_PROGRESS.selectedHat;
 
+  const savedChallenge = typeof d.challenge === 'object' && d.challenge !== null && !Array.isArray(d.challenge)
+    ? d.challenge as Record<string, unknown> : {};
+  const medals: ChallengeMedal[] = ['none', 'bronze', 'silver', 'gold'];
   return {
+    challenge: {
+      unlocked: typeof savedChallenge.unlocked === 'boolean' ? savedChallenge.unlocked : false,
+      attempts: clampInt(savedChallenge.attempts, 0),
+      bestScore: clampInt(savedChallenge.bestScore, 0),
+      bestStreak: Math.min(CHALLENGE_TOTAL_QUESTIONS, clampInt(savedChallenge.bestStreak, 0)),
+      bestMedal: medals.includes(savedChallenge.bestMedal as ChallengeMedal) ? savedChallenge.bestMedal as ChallengeMedal : 'none',
+    },
     playerName: sanitizeName(d.playerName),
     stars: clampInt(d.stars, DEFAULT_PROGRESS.stars),
     gems: clampInt(d.gems, DEFAULT_PROGRESS.gems),
@@ -118,3 +130,28 @@ export function unlockAccessory(progress: PlayerProgress, hatId: string, cost: n
   return { ...progress, gems: progress.gems - item.cost,
     unlockedAccessories: [...progress.unlockedAccessories, hatId], selectedHat: hatId };
 }
+
+export function isChallengeAvailable(progress: PlayerProgress): boolean { return allWorldsCompleted(progress); }
+export function canBuyChallenge(progress: PlayerProgress): boolean {
+  return isChallengeAvailable(progress) && !progress.challenge.unlocked && progress.gems >= CHALLENGE_PRICE;
+}
+export function purchaseChallenge(progress: PlayerProgress): PlayerProgress {
+  return canBuyChallenge(progress) ? { ...progress, gems: progress.gems - CHALLENGE_PRICE,
+    challenge: { ...progress.challenge, unlocked: true } } : progress;
+}
+export function recordChallengeResult(progress: PlayerProgress, result: ChallengeResult): PlayerProgress {
+  if (!progress.challenge.unlocked) return progress;
+  const medals: ChallengeMedal[] = ['none', 'bronze', 'silver', 'gold'];
+  const completed = result.completed && result.correct + result.wrong === CHALLENGE_TOTAL_QUESTIONS && result.wrong < CHALLENGE_LIVES;
+  const medal = computeChallengeMedal({ completed, wrong: result.wrong });
+  return { ...progress, challenge: { ...progress.challenge,
+    attempts: clampInt(progress.challenge.attempts + 1, 0),
+    bestScore: Math.max(progress.challenge.bestScore, clampInt(result.score, 0)),
+    bestStreak: Math.max(progress.challenge.bestStreak, Math.min(CHALLENGE_TOTAL_QUESTIONS, clampInt(result.bestStreak, 0))),
+    bestMedal: medals[Math.max(medals.indexOf(progress.challenge.bestMedal), medals.indexOf(medal))],
+  } };
+}
+export function challengeTitleForMedal(medal: ChallengeMedal): string | null {
+  return ({ none: null, bronze: 'Escalador da Torre', silver: 'Guardião da Torre', gold: 'Mestre da Torre' })[medal] ?? null;
+}
+export function bestChallengeTitle(progress: PlayerProgress): string | null { return challengeTitleForMedal(progress.challenge.bestMedal); }

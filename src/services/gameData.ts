@@ -2,7 +2,7 @@ import wizardHatImg from '../assets/hats/wizard-hat.svg';
 import sunglassesImg from '../assets/accessories/sunglasses.svg';
 import pipImg from '../assets/mascots/pip.svg';
 import dinoImg from '../assets/mascots/dino.svg';
-import type { MascotAccessory, MascotSkin } from '../types/game';
+import type { MascotAccessory, MascotSkin, ChallengeProgress } from '../types/game';
 
 export const MASCOT_LIST: MascotSkin[] = [
   { id: 'pip', name: 'Pip, o Esquilo Feiticeiro', emoji: '🐿️', image: pipImg, color: 'bg-amber-100 border-amber-400 text-amber-900', unlocked: true, cost: 0 },
@@ -22,6 +22,7 @@ export const ACCESSORY_HATS: MascotAccessory[] = [
 ];
 
 export const DEFAULT_PROGRESS: {
+  challenge: ChallengeProgress;
   playerName: string;
   stars: number;
   gems: number;
@@ -35,6 +36,7 @@ export const DEFAULT_PROGRESS: {
   completedLevels: Record<string, number>;
   unlockedAchievements: string[];
 } = {
+  challenge: { unlocked: false, attempts: 0, bestScore: 0, bestStreak: 0, bestMedal: 'none' },
   playerName: 'Aventureiro(a)',
   stars: 0,
   gems: 10,

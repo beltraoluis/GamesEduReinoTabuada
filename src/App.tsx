@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ChallengeRealm } from './components/ChallengeRealm';
 import { TitleScreen } from './components/TitleScreen';
 import { GameRunner } from './components/GameRunner';
 import { BalloonPopGame } from './components/BalloonPopGame';
@@ -9,14 +10,15 @@ import { AchievementsModal } from './components/AchievementsModal';
 import { CertificateModal } from './components/CertificateModal';
 import { WorldSelect } from './components/WorldSelect';
 import { AudioControls } from './components/AudioControls';
-import { PlayerProgress, WorldConfig } from './types/game';
+import { ChallengeResult, PlayerProgress, WorldConfig } from './types/game';
 import { DEFAULT_PROGRESS, WORLDS } from './services/mathEngine';
 import { soundManager } from './services/sound';
-import { sanitizeProgress, sanitizeName, recordWorldCompletion, unlockMascot, unlockAccessory } from './services/progress';
+import { sanitizeProgress, sanitizeName, recordWorldCompletion, unlockMascot, unlockAccessory, purchaseChallenge, recordChallengeResult, bestChallengeTitle } from './services/progress';
 import { applyDevEasterEgg } from './services/devEasterEgg';
 import confetti from 'canvas-confetti';
 
 type AppView =
+  | 'challenge'
   | 'title'
   | 'world_select'
   | 'runner'
@@ -30,7 +32,7 @@ type AppView =
 const STORAGE_KEY = 'tabuada_magica_progress';
 
 // Views with a running game: ESC must not silently discard progress there.
-const GAME_VIEWS: AppView[] = ['runner', 'balloons', 'cauldron'];
+const GAME_VIEWS: AppView[] = ['runner', 'balloons', 'cauldron', 'challenge'];
 
 export default function App() {
   const [currentView, setCurrentView] = useState<AppView>('title');
@@ -145,6 +147,11 @@ export default function App() {
     setCurrentView('title');
   };
 
+  const handleBuyChallenge = () => setProgress((prev) => purchaseChallenge(prev));
+  const handleFinishChallenge = (result: ChallengeResult) => {
+    setProgress((prev) => recordChallengeResult(prev, result));
+  };
+
   // Update Student Name
   const handleUpdateName = (newName: string) => {
     setProgress((prev) =>
@@ -225,12 +232,19 @@ export default function App() {
         {currentView === 'world_select' && (
           <WorldSelect
             progress={progress}
+            onBuyChallenge={handleBuyChallenge}
+            onEnterChallenge={() => { if (progress.challenge.unlocked) setCurrentView('challenge'); }}
             onSelectWorld={(world) => {
               setSelectedWorld(world);
               setCurrentView('runner');
             }}
             onBack={() => setCurrentView('title')}
           />
+        )}
+
+        {currentView === 'challenge' && progress.challenge.unlocked && (
+          <ChallengeRealm playerName={progress.playerName} mascotId={progress.selectedMascot} hatId={progress.selectedHat}
+            onFinish={handleFinishChallenge} onBack={() => setCurrentView('world_select')} />
         )}
 
         {currentView === 'runner' && (
@@ -296,6 +310,7 @@ export default function App() {
             selectedMascot={progress.selectedMascot}
             selectedHat={progress.selectedHat}
             totalStars={progress.stars}
+            challengeTitle={bestChallengeTitle(progress)}
             onBack={() => setCurrentView('achievements')}
           />
         )}
