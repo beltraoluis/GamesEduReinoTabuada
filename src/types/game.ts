@@ -40,6 +40,7 @@ export interface Question {
 }
 
 export interface MascotSkin {
+  requiresAllWorlds?: boolean;
   id: string;
   name: string;
   emoji: string;
@@ -80,6 +81,6 @@ export interface PlayerProgress {
   selectedHat: string;
   unlockedMascots: string[];
   unlockedAccessories: string[];
-  completedLevels: Record<string, number>; // worldId_levelIndex -> stars (1-3)
+  completedLevels: Record<string, number>; // worldId -> best victory stars (1-3); legacy level keys may remain
   unlockedAchievements: string[];
 }

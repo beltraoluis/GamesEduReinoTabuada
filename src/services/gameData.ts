@@ -7,17 +7,17 @@ import type { MascotAccessory, MascotSkin } from '../types/game';
 export const MASCOT_LIST: MascotSkin[] = [
   { id: 'pip', name: 'Pip, o Esquilo Feiticeiro', emoji: '🐿️', image: pipImg, color: 'bg-amber-100 border-amber-400 text-amber-900', unlocked: true, cost: 0 },
   { id: 'lunna', name: 'Lunna, a Raposinha Estelar', emoji: '🦊', color: 'bg-orange-100 border-orange-400 text-orange-900', unlocked: true, cost: 0 },
-  { id: 'dino', name: 'Dino, o Dragão Brincalhão', emoji: '🦖', image: dinoImg, color: 'bg-emerald-100 border-emerald-400 text-emerald-900', unlocked: false, cost: 300 },
-  { id: 'sol', name: 'Solzinho, o Ursinho Alquimista', emoji: '🐻', color: 'bg-yellow-100 border-yellow-400 text-yellow-900', unlocked: false, cost: 500 },
-  { id: 'estrela', name: 'Gatito, o Mago Cósmico', emoji: '🐱', color: 'bg-indigo-100 border-indigo-400 text-indigo-900', unlocked: false, cost: 800 },
+  { id: 'dino', name: 'Dino, o Dragão Brincalhão', emoji: '🦖', image: dinoImg, color: 'bg-emerald-100 border-emerald-400 text-emerald-900', unlocked: false, cost: 580 },
+  { id: 'sol', name: 'Solzinho, o Ursinho Alquimista', emoji: '🐻', color: 'bg-yellow-100 border-yellow-400 text-yellow-900', unlocked: false, cost: 970 },
+  { id: 'estrela', name: 'Gatito, o Mago Cósmico', emoji: '🐱', color: 'bg-indigo-100 border-indigo-400 text-indigo-900', unlocked: false, cost: 1550, requiresAllWorlds: true },
 ];
 
 export const ACCESSORY_HATS: MascotAccessory[] = [
   { id: 'none', name: 'Sem Chapéu', type: 'hat', emoji: '✖️', cost: 0, unlocked: true },
-  { id: 'wizard', name: 'Chapéu Mágico de Estrelas', type: 'hat', emoji: '🧙‍♂️', image: wizardHatImg, cost: 100, unlocked: false },
-  { id: 'crown', name: 'Coroa Dourada Real', type: 'hat', emoji: '👑', cost: 200, unlocked: false },
-  { id: 'cap', name: 'Boné Radical', type: 'hat', emoji: '🧢', cost: 80, unlocked: false },
-  { id: 'sunglasses', name: 'Óculos Escuros Maneiros', type: 'glasses', emoji: '🕶️', image: sunglassesImg, cost: 150, unlocked: false },
+  { id: 'wizard', name: 'Chapéu Mágico de Estrelas', type: 'hat', emoji: '🧙‍♂️', image: wizardHatImg, cost: 190, unlocked: false },
+  { id: 'crown', name: 'Coroa Dourada Real', type: 'hat', emoji: '👑', cost: 390, unlocked: false },
+  { id: 'cap', name: 'Boné Radical', type: 'hat', emoji: '🧢', cost: 170, unlocked: false },
+  { id: 'sunglasses', name: 'Óculos Escuros Maneiros', type: 'glasses', emoji: '🕶️', image: sunglassesImg, cost: 290, unlocked: false },
   { id: 'flower', name: 'Florzinha Encantada', type: 'hat', emoji: '🌸', cost: 80, unlocked: false },
 ];
 

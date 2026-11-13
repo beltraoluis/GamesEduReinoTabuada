@@ -1,5 +1,6 @@
 import { containsProfanity } from './profanity';
-import type { PlayerProgress } from '../types/game';
+import { WORLDS } from './mathEngine';
+import type { MascotSkin, PlayerProgress } from '../types/game';
 import { ACCESSORY_HATS, ACHIEVEMENTS_LIST, DEFAULT_PROGRESS, MASCOT_LIST } from './gameData';
 
 export const MAX_NAME_LENGTH = 20;
@@ -81,4 +82,30 @@ export function sanitizeProgress(raw: unknown): PlayerProgress {
     completedLevels,
     unlockedAchievements,
   };
+}
+
+/** Only canonical runner world ids count; legacy level ids cannot bypass the gate. */
+export function allWorldsCompleted(progress: Pick<PlayerProgress, 'completedLevels'>): boolean {
+  return WORLDS.every(({ id }) => Object.hasOwn(progress.completedLevels, id)
+    && Number.isFinite(progress.completedLevels[id]) && progress.completedLevels[id] >= 1);
+}
+
+export function meetsUnlockRequirement(item: Pick<MascotSkin, 'requiresAllWorlds'>, progress: Pick<PlayerProgress, 'completedLevels'>): boolean {
+  return !item.requiresAllWorlds || allWorldsCompleted(progress);
+}
+
+/** A victory records one realm, retaining the best valid star count across replays. */
+export function recordWorldCompletion(progress: PlayerProgress, worldId: string, starsEarned: number): PlayerProgress {
+  if (!WORLDS.some(({ id }) => id === worldId) || !Number.isFinite(starsEarned) || starsEarned < 1) return progress;
+  return { ...progress, completedLevels: { ...progress.completedLevels,
+    [worldId]: Math.max(Math.min(3, Math.max(0, progress.completedLevels[worldId] || 0)), Math.min(3, Math.trunc(starsEarned))) } };
+}
+
+/** Canonical price and gate checks also protect callers that bypass wardrobe UI. */
+export function unlockMascot(progress: PlayerProgress, mascotId: string, cost: number): PlayerProgress {
+  const item = MASCOT_LIST.find(({ id }) => id === mascotId);
+  if (!item || cost !== item.cost || progress.gems < item.cost || progress.unlockedMascots.includes(mascotId)
+    || !meetsUnlockRequirement(item, progress)) return progress;
+  return { ...progress, gems: progress.gems - item.cost,
+    unlockedMascots: [...progress.unlockedMascots, mascotId], selectedMascot: mascotId };
 }

@@ -344,3 +344,62 @@ describe('player name profanity protection', () => {
     expect(sanitizeName(' '.repeat(3) + 'a'.repeat(15) + ' putaZ')).toBe(DEFAULT_PROGRESS.playerName);
   });
 });
+
+// These same pure handlers are called by App's runner/wardrobe state updaters.
+import { allWorldsCompleted, meetsUnlockRequirement, recordWorldCompletion, unlockMascot } from './progress';
+import { MASCOT_LIST } from './gameData';
+import { WORLDS } from './mathEngine';
+
+describe('runner completion and gated mascot purchases', () => {
+  const top = MASCOT_LIST.find(item => item.id === 'estrela')!;
+  const rich = { ...DEFAULT_PROGRESS, gems: 10000 };
+  const completed = { ...rich, completedLevels: Object.fromEntries(WORLDS.map(w => [w.id, 1])) };
+
+  it('blocks the top mascot even with enough gems until every canonical realm is won', () => {
+    expect(unlockMascot(rich, top.id, top.cost)).toBe(rich);
+    for (const world of WORLDS) {
+      const partial = { ...completed, completedLevels: { ...completed.completedLevels, [world.id]: 0 } };
+      expect(allWorldsCompleted(partial)).toBe(false);
+      expect(unlockMascot(partial, top.id, top.cost)).toBe(partial);
+    }
+    expect(allWorldsCompleted(completed)).toBe(true);
+    expect(meetsUnlockRequirement(top, completed)).toBe(true);
+    const bought = unlockMascot(completed, top.id, top.cost);
+    expect(bought.gems).toBe(completed.gems - top.cost);
+    expect(bought.selectedMascot).toBe(top.id);
+    expect(bought.unlockedMascots).toContain(top.id);
+    expect(unlockMascot(bought, top.id, top.cost)).toBe(bought);
+  });
+
+  it('refuses forged prices, unknown ids and insufficient funds', () => {
+    expect(unlockMascot(completed, top.id, 0)).toBe(completed);
+    expect(unlockMascot(completed, 'unknown', 0)).toBe(completed);
+    const poor = { ...completed, gems: top.cost - 1 };
+    expect(unlockMascot(poor, top.id, top.cost)).toBe(poor);
+    const dino = MASCOT_LIST.find(item => item.id === 'dino')!;
+    expect(meetsUnlockRequirement(dino, rich)).toBe(true);
+    expect(unlockMascot(rich, dino.id, dino.cost).unlockedMascots).toContain(dino.id);
+  });
+
+  it('records the selected realm, preserves best stars and ignores failed/invalid runs', () => {
+    let result = recordWorldCompletion(rich, 'world-3', 2);
+    expect(result.completedLevels).toEqual({ 'world-3': 2 });
+    result = recordWorldCompletion(result, 'world-3', 1);
+    expect(result.completedLevels['world-3']).toBe(2);
+    result = recordWorldCompletion(result, 'world-3', 3);
+    expect(result.completedLevels['world-3']).toBe(3);
+    expect(recordWorldCompletion(result, 'world-4', 0)).toBe(result);
+    expect(recordWorldCompletion(result, '__proto__', 3)).toBe(result);
+    expect(recordWorldCompletion(result, 'world-4', NaN)).toBe(result);
+    expect(rich.completedLevels).toEqual({});
+  });
+
+  it('keeps canonical world ids and their gate through sanitize/save/load', () => {
+    const loaded = sanitizeProgress(JSON.parse(JSON.stringify(completed)));
+    expect(loaded.completedLevels).toEqual(completed.completedLevels);
+    expect(allWorldsCompleted(loaded)).toBe(true);
+    const legacy = { ...rich, completedLevels: Object.fromEntries(WORLDS.map(w => [`${w.id}_0`, 3])) };
+    expect(allWorldsCompleted(legacy)).toBe(false);
+    expect(allWorldsCompleted({ completedLevels: { 'world-1': NaN } })).toBe(false);
+  });
+});

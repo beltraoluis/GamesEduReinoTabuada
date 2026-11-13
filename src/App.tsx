@@ -12,7 +12,7 @@ import { AudioControls } from './components/AudioControls';
 import { PlayerProgress, WorldConfig } from './types/game';
 import { DEFAULT_PROGRESS, WORLDS } from './services/mathEngine';
 import { soundManager } from './services/sound';
-import { sanitizeProgress, sanitizeName } from './services/progress';
+import { sanitizeProgress, sanitizeName, recordWorldCompletion, unlockMascot } from './services/progress';
 import { applyDevEasterEgg } from './services/devEasterEgg';
 import confetti from 'canvas-confetti';
 
@@ -72,6 +72,7 @@ export default function App() {
 
   // Award stars and gems from Runner
   const handleFinishRunner = (starsEarned: number, gemsEarned: number, score: number) => {
+    const completedWorldId = selectedWorld.id;
     setProgress((prev) => {
       const newStars = prev.stars + starsEarned;
       const newGems = prev.gems + gemsEarned;
@@ -86,7 +87,7 @@ export default function App() {
       }
 
       return {
-        ...prev,
+        ...recordWorldCompletion(prev, completedWorldId, starsEarned),
         stars: newStars,
         gems: newGems,
         highScoreRunner: newHighScore,
@@ -97,8 +98,10 @@ export default function App() {
     setCurrentView('world_select');
   };
 
+  // Accept both legacy (score, gems) and shared (stars, gems, score) callbacks.
   // Award from Balloon Pop
-  const handleFinishBalloons = (score: number, gemsEarned: number) => {
+  const handleFinishBalloons = (starsEarned: number, gemsEarned: number, finalScore?: number) => {
+    const score = finalScore ?? starsEarned;
     setProgress((prev) => {
       const newGems = prev.gems + gemsEarned;
       const newHigh = Math.max(prev.highScoreBalloons, score);
@@ -120,7 +123,8 @@ export default function App() {
   };
 
   // Award from Potion Cauldron
-  const handleFinishCauldron = (score: number, gemsEarned: number) => {
+  const handleFinishCauldron = (starsEarned: number, gemsEarned: number, finalScore?: number) => {
+    const score = finalScore ?? starsEarned;
     setProgress((prev) => {
       const newGems = prev.gems + gemsEarned;
       const newHigh = Math.max(prev.highScoreCauldron, score);
@@ -159,13 +163,7 @@ export default function App() {
 
   const handleUnlockMascot = (mascotId: string, cost: number) => {
     setProgress((prev) => {
-      if (cost < 0 || prev.gems < cost || prev.unlockedMascots.includes(mascotId)) return prev;
-      return {
-        ...prev,
-        gems: prev.gems - cost,
-        unlockedMascots: [...prev.unlockedMascots, mascotId],
-        selectedMascot: mascotId,
-      };
+      return unlockMascot(prev, mascotId, cost);
     });
   };
 
@@ -280,6 +278,7 @@ export default function App() {
             gems={progress.gems}
             unlockedMascots={progress.unlockedMascots}
             unlockedAccessories={progress.unlockedAccessories}
+            completedLevels={progress.completedLevels}
             onUpdateName={handleUpdateName}
             onSelectMascot={handleSelectMascot}
             onSelectHat={handleSelectHat}

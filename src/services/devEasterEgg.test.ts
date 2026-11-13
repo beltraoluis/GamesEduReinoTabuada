@@ -71,3 +71,12 @@ describe('applyDevEasterEgg', () => {
     });
   });
 });
+
+it('yoda bypasses the all-worlds purchase gate and reset clears completions and unlocks', () => {
+  const unlocked = applyDevEasterEgg({ ...DEFAULT_PROGRESS, playerName: 'yoda' });
+  expect(unlocked.completedLevels).toEqual({});
+  expect(unlocked.unlockedMascots).toContain('estrela');
+  const reset = applyDevEasterEgg({ ...unlocked, playerName: 'reset', completedLevels: { 'world-1': 3 } });
+  expect(reset.completedLevels).toEqual({});
+  expect(reset.unlockedMascots).not.toContain('estrela');
+});
