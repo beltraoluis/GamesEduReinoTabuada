@@ -58,9 +58,8 @@ const top = Math.round(journeyTotal / 50) * 50;
  * Journey at 2 stars/run: worlds 1,1,2,2,3,3,4,4,4,5; 10 runs total.
  * Realm subtotals: 164.27, 234.39, 332.50, 597.24, 204.03; total 1532.43.
  * TOP=1550; starting balance (10) and free-play gems are excluded.
- * Price table: pip/lunna/none=0; flower=80 (fixed); cap=170; wizard=190;
- * sunglasses=290; crown=390; dino=580; sol=970; estrela=1550.
- * Flower is now uniquely cheapest; the remaining order is preserved.
+ * Price table: pip/lunna/none=0; flower=80 and cap=80 (fixed, the cheapest items);
+ * wizard=190; sunglasses=290; crown=390; dino=580; sol=970; estrela=1550.
  */
 describe('economy sizing', () => {
   it('documents exact round-floor expectations and proportional prices', () => {
@@ -77,11 +76,15 @@ describe('economy sizing', () => {
       for (let i = 1; i < scenario.length; i++) expect(scenario[i]).toBeGreaterThan(scenario[i - 1]);
     }
     expect(MASCOT_LIST.find(m => m.id === 'estrela')?.cost).toBe(top);
-    for (const [id, old] of Object.entries({ dino: 280, sol: 470, wizard: 90, crown: 190, cap: 80, sunglasses: 140 })) {
+    for (const [id, old] of Object.entries({ dino: 280, sol: 470, wizard: 90, crown: 190, sunglasses: 140 })) {
       const item = [...MASCOT_LIST, ...ACCESSORY_HATS].find(item => item.id === id);
       expect(item?.cost).toBe(Math.round(top * old / 750 / 10) * 10);
     }
     expect(ACCESSORY_HATS.find(h => h.id === 'flower')?.cost).toBe(80);
+    expect(ACCESSORY_HATS.find(h => h.id === 'cap')?.cost).toBe(80);
+    const paid = [...MASCOT_LIST, ...ACCESSORY_HATS].filter(i => i.cost > 0);
+    expect(paid.filter(i => i.cost === 80).map(i => i.id).sort()).toEqual(['cap', 'flower']);
+    expect(Math.min(...paid.filter(i => !['cap', 'flower'].includes(i.id)).map(i => i.cost))).toBeGreaterThan(80);
     expect([...MASCOT_LIST, ...ACCESSORY_HATS].filter(i => ['pip', 'lunna', 'none'].includes(i.id)).every(i => i.cost === 0)).toBe(true);
   });
 });

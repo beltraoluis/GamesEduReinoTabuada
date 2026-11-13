@@ -16,7 +16,7 @@ export const ACCESSORY_HATS: MascotAccessory[] = [
   { id: 'none', name: 'Sem Chapéu', type: 'hat', emoji: '✖️', cost: 0, unlocked: true },
   { id: 'wizard', name: 'Chapéu Mágico de Estrelas', type: 'hat', emoji: '🧙‍♂️', image: wizardHatImg, cost: 190, unlocked: false },
   { id: 'crown', name: 'Coroa Dourada Real', type: 'hat', emoji: '👑', cost: 390, unlocked: false },
-  { id: 'cap', name: 'Boné Radical', type: 'hat', emoji: '🧢', cost: 170, unlocked: false },
+  { id: 'cap', name: 'Boné Radical', type: 'hat', emoji: '🧢', cost: 80, unlocked: false },
   { id: 'sunglasses', name: 'Óculos Escuros Maneiros', type: 'glasses', emoji: '🕶️', image: sunglassesImg, cost: 290, unlocked: false },
   { id: 'flower', name: 'Florzinha Encantada', type: 'hat', emoji: '🌸', cost: 80, unlocked: false },
 ];
