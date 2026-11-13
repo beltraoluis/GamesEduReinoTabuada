@@ -1,16 +1,22 @@
 import type { PlayerProgress } from '../types/game';
-import { ACCESSORY_HATS, MASCOT_LIST } from './gameData';
+import { ACCESSORY_HATS, DEFAULT_PROGRESS, MASCOT_LIST } from './gameData';
 
 const DEV_UNLOCK_NAME = 'yoda';
+const DEV_RESET_NAME = 'reset';
 
 /**
- * Teste apenas em desenvolvimento: com o nome "yoda", libera todos os
- * mascotes e acessórios. `import.meta.env.DEV` é substituído por `false` no
- * build de produção, então o corpo da função é removido do bundle.
+ * Atalhos apenas para testes em desenvolvimento, acionados pelo nome do aluno:
+ * - "yoda": libera todos os mascotes e acessórios;
+ * - "reset": volta o jogo ao estado original, inclusive o nome padrão.
+ *
+ * `import.meta.env.DEV` é substituído por `false` no build de produção, então
+ * o corpo da função é removido do bundle.
  */
 export function applyDevEasterEgg(progress: PlayerProgress): PlayerProgress {
   if (!import.meta.env.DEV) return progress;
-  if (progress.playerName.trim().toLowerCase() !== DEV_UNLOCK_NAME) return progress;
+  const name = progress.playerName.trim().toLowerCase();
+  if (name === DEV_RESET_NAME) return structuredClone(DEFAULT_PROGRESS);
+  if (name !== DEV_UNLOCK_NAME) return progress;
   return {
     ...progress,
     unlockedMascots: MASCOT_LIST.map((m) => m.id),
