@@ -244,7 +244,18 @@ export const MascotWardrobe: React.FC<MascotWardrobeProps> = ({
                     : 'border-slate-200 bg-white hover:border-amber-200'
                 }`}
               >
-                <span className="text-4xl mb-1">{m.emoji}</span>
+                <span className="text-4xl mb-1 flex items-center justify-center leading-none">
+                  {m.image ? (
+                    <img
+                      src={m.image}
+                      alt={m.name}
+                      draggable={false}
+                      className="w-[1.15em] h-[1.15em] object-contain select-none"
+                    />
+                  ) : (
+                    m.emoji
+                  )}
+                </span>
                 <span className="text-xs font-bold text-slate-800 line-clamp-1">{m.name.split(',')[0]}</span>
 
                 {isUnlocked ? (

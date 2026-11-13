@@ -43,6 +43,7 @@ export interface MascotSkin {
   id: string;
   name: string;
   emoji: string;
+  image?: string;
   color: string;
   unlocked: boolean;
   cost: number;

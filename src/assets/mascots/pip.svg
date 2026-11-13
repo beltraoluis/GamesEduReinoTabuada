@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <radialGradient id="pip-fur" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#FB923C" />
+      <stop offset="65%" stop-color="#EA580C" />
+      <stop offset="100%" stop-color="#C2410C" />
+    </radialGradient>
+    <linearGradient id="pip-ear-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F97316" />
+      <stop offset="100%" stop-color="#C2410C" />
+    </linearGradient>
+    <radialGradient id="pip-muzzle" cx="50%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#FFFBEB" />
+      <stop offset="75%" stop-color="#FEF3C7" />
+      <stop offset="100%" stop-color="#FDE68A" />
+    </radialGradient>
+  </defs>
+
+  <!-- Left Ear with cute rounded fur tuft -->
+  <path
+    d="M19 40C13 27 14 13 21 8C24 6 26 9 27 12C31 15 35 23 36 33Z"
+    fill="url(#pip-ear-grad)"
+  />
+  <path
+    d="M22 33C19 25 20 17 24 15C28 17 31 23 32 30Z"
+    fill="#FED7AA"
+  />
+
+  <!-- Right Ear with cute rounded fur tuft -->
+  <path
+    d="M81 40C87 27 86 13 79 8C76 6 74 9 73 12C69 15 65 23 64 33Z"
+    fill="url(#pip-ear-grad)"
+  />
+  <path
+    d="M78 33C81 25 80 17 76 15C72 17 69 23 68 30Z"
+    fill="#FED7AA"
+  />
+
+  <!-- Main Rounded Squirrel Head with chubby cheeks -->
+  <path
+    d="M50 18C70 18 82 29 84 46C88 53 89 63 83 72C76 82 64 87 50 87C36 87 24 82 17 72C11 63 12 53 16 46C18 29 30 18 50 18Z"
+    fill="url(#pip-fur)"
+  />
+
+  <!-- Soft forehead highlight -->
+  <ellipse cx="50" cy="30" rx="18" ry="8" fill="#FDBA74" opacity="0.32" />
+
+  <!-- Cream Muzzle & Chubby Cheeks -->
+  <path
+    d="M50 51C57 51 62 55 66 56C76 57 83 62 81 71C78 80 65 86 50 86C35 86 22 80 19 71C17 62 24 57 34 56C38 55 43 51 50 51Z"
+    fill="url(#pip-muzzle)"
+  />
+
+  <!-- Rosy Cheeks -->
+  <ellipse cx="26.5" cy="66" rx="6.5" ry="4.2" fill="#FB7185" opacity="0.45" />
+  <ellipse cx="73.5" cy="66" rx="6.5" ry="4.2" fill="#FB7185" opacity="0.45" />
+
+  <!-- Subtle Eyebrows -->
+  <path d="M29 36C32 34 36 34 39 36" stroke="#9A3412" stroke-width="2.4" stroke-linecap="round" />
+  <path d="M61 36C64 34 68 34 71 36" stroke="#9A3412" stroke-width="2.4" stroke-linecap="round" />
+
+  <!-- Big Shiny Eyes -->
+  <ellipse cx="35" cy="46" rx="6.8" ry="7.6" fill="#29150B" />
+  <circle cx="32.8" cy="43.2" r="2.5" fill="#FFFFFF" />
+  <circle cx="37.2" cy="48.5" r="1.1" fill="#FFFFFF" opacity="0.85" />
+
+  <ellipse cx="65" cy="46" rx="6.8" ry="7.6" fill="#29150B" />
+  <circle cx="62.8" cy="43.2" r="2.5" fill="#FFFFFF" />
+  <circle cx="67.2" cy="48.5" r="1.1" fill="#FFFFFF" opacity="0.85" />
+
+  <!-- Little Buck Teeth (drawn behind/under smile lip) -->
+  <path
+    d="M45.5 67.5H50V72.5C50 73.6 49.1 74.5 48 74.5H47C46.2 74.5 45.5 73.8 45.5 73V67.5Z"
+    fill="#FFFFFF"
+    stroke="#7C2D12"
+    stroke-width="1.2"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M50 67.5H54.5V73C54.5 73.8 53.8 74.5 53 74.5H52C50.9 74.5 50 73.6 50 72.5V67.5Z"
+    fill="#FFFFFF"
+    stroke="#7C2D12"
+    stroke-width="1.2"
+    stroke-linejoin="round"
+  />
+
+  <!-- Friendly W-Smile -->
+  <path
+    d="M39 65.5C41.5 69 46.5 69.5 50 66.5C53.5 69.5 58.5 69 61 65.5"
+    stroke="#451A03"
+    stroke-width="2.6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path d="M50 61.5V66.5" stroke="#451A03" stroke-width="2.4" stroke-linecap="round" />
+
+  <!-- Tiny Cute Button Nose -->
+  <path
+    d="M44.5 57.5C44.5 55.3 47 54.5 50 54.5C53 54.5 55.5 55.3 55.5 57.5C55.5 59.7 52.5 62 50 62C47.5 62 44.5 59.7 44.5 57.5Z"
+    fill="#451A03"
+  />
+  <ellipse cx="48.2" cy="56.5" rx="1.8" ry="0.9" fill="#FFFFFF" opacity="0.4" />
+</svg>

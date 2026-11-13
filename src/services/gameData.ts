@@ -1,9 +1,12 @@
 import wizardHatImg from '../assets/hats/wizard-hat.svg';
+import pipImg from '../assets/mascots/pip.svg';
+import dinoImg from '../assets/mascots/dino.svg';
+import type { MascotSkin } from '../types/game';
 
-export const MASCOT_LIST = [
-  { id: 'pip', name: 'Pip, o Esquilo Feiticeiro', emoji: '🐿️', color: 'bg-amber-100 border-amber-400 text-amber-900', unlocked: true, cost: 0 },
+export const MASCOT_LIST: MascotSkin[] = [
+  { id: 'pip', name: 'Pip, o Esquilo Feiticeiro', emoji: '🐿️', image: pipImg, color: 'bg-amber-100 border-amber-400 text-amber-900', unlocked: true, cost: 0 },
   { id: 'lunna', name: 'Lunna, a Raposinha Estelar', emoji: '🦊', color: 'bg-orange-100 border-orange-400 text-orange-900', unlocked: true, cost: 0 },
-  { id: 'dino', name: 'Dino, o Dragão Brincalhão', emoji: '🦖', color: 'bg-emerald-100 border-emerald-400 text-emerald-900', unlocked: false, cost: 15 },
+  { id: 'dino', name: 'Dino, o Dragão Brincalhão', emoji: '🦖', image: dinoImg, color: 'bg-emerald-100 border-emerald-400 text-emerald-900', unlocked: false, cost: 15 },
   { id: 'sol', name: 'Solzinho, o Ursinho Alquimista', emoji: '🐻', color: 'bg-yellow-100 border-yellow-400 text-yellow-900', unlocked: false, cost: 25 },
   { id: 'estrela', name: 'Gatito, o Mago Cósmico', emoji: '🐱', color: 'bg-indigo-100 border-indigo-400 text-indigo-900', unlocked: false, cost: 40 },
 ];

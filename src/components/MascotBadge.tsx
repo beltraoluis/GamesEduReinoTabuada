@@ -75,7 +75,16 @@ export const MascotBadge: React.FC<MascotBadgeProps> = ({
         )}
 
         {/* Mascot Face */}
-        <span className="select-none filter drop-shadow-sm">{mascot.emoji}</span>
+        {mascot.image ? (
+          <img
+            src={mascot.image}
+            alt={mascot.name}
+            draggable={false}
+            className="w-[1.15em] h-[1.15em] object-contain select-none filter drop-shadow-sm"
+          />
+        ) : (
+          <span className="select-none filter drop-shadow-sm">{mascot.emoji}</span>
+        )}
       </div>
 
       {showName && (
