@@ -13,6 +13,7 @@ import { PlayerProgress, WorldConfig } from './types/game';
 import { DEFAULT_PROGRESS, WORLDS } from './services/mathEngine';
 import { soundManager } from './services/sound';
 import { sanitizeProgress, sanitizeName } from './services/progress';
+import { applyDevEasterEgg } from './services/devEasterEgg';
 import confetti from 'canvas-confetti';
 
 type AppView =
@@ -142,7 +143,9 @@ export default function App() {
 
   // Update Student Name
   const handleUpdateName = (newName: string) => {
-    setProgress((prev) => ({ ...prev, playerName: sanitizeName(newName) }));
+    setProgress((prev) =>
+      applyDevEasterEgg({ ...prev, playerName: sanitizeName(newName) })
+    );
   };
 
   // Wardrobe unlocks
