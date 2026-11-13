@@ -12,6 +12,7 @@ import { AudioControls } from './components/AudioControls';
 import { PlayerProgress, WorldConfig } from './types/game';
 import { DEFAULT_PROGRESS, WORLDS } from './services/mathEngine';
 import { soundManager } from './services/sound';
+import { sanitizeProgress, sanitizeName } from './services/progress';
 import confetti from 'canvas-confetti';
 
 type AppView =
@@ -26,36 +27,6 @@ type AppView =
   | 'certificate';
 
 const STORAGE_KEY = 'tabuada_magica_progress';
-
-const isStringArray = (v: unknown): v is string[] =>
-  Array.isArray(v) && v.every((x) => typeof x === 'string');
-
-const isNumberRecord = (v: unknown): v is Record<string, number> =>
-  typeof v === 'object' &&
-  v !== null &&
-  !Array.isArray(v) &&
-  Object.values(v).every((x) => typeof x === 'number' && Number.isFinite(x));
-
-// Shallow-merge saved data over defaults, keeping only fields of the right type.
-function sanitizeProgress(raw: unknown): PlayerProgress {
-  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return DEFAULT_PROGRESS;
-  const data = raw as Record<string, unknown>;
-  const result: PlayerProgress = { ...DEFAULT_PROGRESS };
-  (Object.keys(DEFAULT_PROGRESS) as (keyof PlayerProgress)[]).forEach((key) => {
-    const def = DEFAULT_PROGRESS[key];
-    const val = data[key];
-    if (Array.isArray(def)) {
-      if (isStringArray(val)) (result as unknown as Record<string, unknown>)[key] = val;
-    } else if (typeof def === 'object' && def !== null) {
-      if (isNumberRecord(val)) (result as unknown as Record<string, unknown>)[key] = val;
-    } else if (typeof def === 'number') {
-      if (typeof val === 'number' && Number.isFinite(val)) (result as unknown as Record<string, unknown>)[key] = val;
-    } else if (typeof val === typeof def) {
-      (result as unknown as Record<string, unknown>)[key] = val;
-    }
-  });
-  return result;
-}
 
 // Views with a running game: ESC must not silently discard progress there.
 const GAME_VIEWS: AppView[] = ['runner', 'balloons', 'cauldron'];
@@ -171,7 +142,7 @@ export default function App() {
 
   // Update Student Name
   const handleUpdateName = (newName: string) => {
-    setProgress((prev) => ({ ...prev, playerName: newName }));
+    setProgress((prev) => ({ ...prev, playerName: sanitizeName(newName) }));
   };
 
   // Wardrobe unlocks

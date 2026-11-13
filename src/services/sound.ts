@@ -1,6 +1,22 @@
 // Web Audio API Synthesizer and Web Speech API helper
 // Completely self-contained, no external audio assets needed!
 
+function safeGet(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSet(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // storage blocked or full: ignore
+  }
+}
+
 class SoundManager {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
@@ -10,11 +26,11 @@ class SoundManager {
 
   constructor() {
     // AudioContext will be initialized on first user interaction
-    const savedMuted = localStorage.getItem('tabuada_sound_muted');
+    const savedMuted = safeGet('tabuada_sound_muted');
     if (savedMuted) this.isMuted = savedMuted === 'true';
-    const savedMusic = localStorage.getItem('tabuada_music_muted');
+    const savedMusic = safeGet('tabuada_music_muted');
     if (savedMusic) this.isMusicMuted = savedMusic === 'true';
-    const savedSpeech = localStorage.getItem('tabuada_speech_enabled');
+    const savedSpeech = safeGet('tabuada_speech_enabled');
     if (savedSpeech) this.isSpeechEnabled = savedSpeech !== 'false';
   }
 
@@ -30,7 +46,7 @@ class SoundManager {
 
   public toggleMute(): boolean {
     this.isMuted = !this.isMuted;
-    localStorage.setItem('tabuada_sound_muted', String(this.isMuted));
+    safeSet('tabuada_sound_muted', String(this.isMuted));
     return this.isMuted;
   }
 
@@ -40,7 +56,7 @@ class SoundManager {
 
   public toggleMusic(): boolean {
     this.isMusicMuted = !this.isMusicMuted;
-    localStorage.setItem('tabuada_music_muted', String(this.isMusicMuted));
+    safeSet('tabuada_music_muted', String(this.isMusicMuted));
     if (this.isMusicMuted) {
       this.stopMusic();
     } else {
@@ -55,7 +71,7 @@ class SoundManager {
 
   public toggleSpeech(): boolean {
     this.isSpeechEnabled = !this.isSpeechEnabled;
-    localStorage.setItem('tabuada_speech_enabled', String(this.isSpeechEnabled));
+    safeSet('tabuada_speech_enabled', String(this.isSpeechEnabled));
     return this.isSpeechEnabled;
   }
 
@@ -287,16 +303,26 @@ class SoundManager {
     }
   }
 
-  // Speak text in Portuguese using Web Speech API
-  public speak(text: string) {
+  // Speak text in Portuguese using Web Speech API.
+  // Only local (on-device) voices are used for `text`. If none is available (or voices
+  // have not loaded yet), `genericText` (which must not contain personal data) is spoken
+  // instead; when no genericText is given, `text` is assumed to be non-personal.
+  public speak(text: string, genericText?: string) {
     if (!this.isSpeechEnabled || !('speechSynthesis' in window)) return;
     try {
-      window.speechSynthesis.cancel(); // Stop any pending speech
-      const utterance = new SpeechSynthesisUtterance(text);
+      const synth = window.speechSynthesis;
+      synth.cancel(); // Stop any pending speech
+      const localVoice = synth
+        .getVoices()
+        .find((v) => v.lang.toLowerCase().startsWith('pt') && v.localService);
+      let toSpeak = text;
+      if (!localVoice && genericText !== undefined) toSpeak = genericText;
+      const utterance = new SpeechSynthesisUtterance(toSpeak);
       utterance.lang = 'pt-BR';
+      if (localVoice) utterance.voice = localVoice;
       utterance.rate = 1.0;
       utterance.pitch = 1.15; // slightly higher friendly tone for kids
-      window.speechSynthesis.speak(utterance);
+      synth.speak(utterance);
     } catch {
       // ignore speech errors
     }
