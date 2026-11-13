@@ -1,6 +1,5 @@
 {
   "name": "Reino da Tabuada Mágica - 3º Ano",
   "description": "Jogo lúdico, criativo e educativo para aprender e dominar a tabuada no 3º ano do Ensino Fundamental com aventuras, desafios de corrida, balões e visualização concreta.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "requestFramePermissions": []
 }

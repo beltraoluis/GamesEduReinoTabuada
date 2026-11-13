@@ -145,8 +145,9 @@ export const BalloonPopGame: React.FC<BalloonPopGameProps> = ({ onBack, onFinish
       }
 
       // Next Question
-      const nextQ = generateQuestion(selectedTables);
-      setQuestion(nextQ);
+      setQuestion((prev) =>
+        generateQuestion(selectedTables, 10, { factorA: prev.factorA, factorB: prev.factorB })
+      );
     } else {
       soundManager.playWrong();
       setCombo(0);

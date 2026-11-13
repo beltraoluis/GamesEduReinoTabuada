@@ -95,7 +95,9 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
       timeoutTriggeredRef.current = false;
       setRoundTimer(ROUND_TIMER_SECONDS);
       setQuestionIndex((prev) => prev + 1);
-      setCurrentQuestion(generateQuestion(world.tables));
+      setCurrentQuestion((prev) =>
+        generateQuestion(world.tables, 10, { factorA: prev.factorA, factorB: prev.factorB })
+      );
       setRoundPhase('choosing');
       returnTimeoutRef.current = null;
     }, 650);

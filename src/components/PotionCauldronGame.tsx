@@ -53,7 +53,12 @@ export const PotionCauldronGame: React.FC<PotionCauldronGameProps> = ({ onBack, 
         setBubbles(false);
         setFeedback(null);
         setSelectedIngredient(INGREDIENTS[Math.floor(Math.random() * INGREDIENTS.length)]);
-        setQuestion(generateQuestion([2, 3, 4, 5, 6, 7, 8]));
+        setQuestion((prev) =>
+          generateQuestion([2, 3, 4, 5, 6, 7, 8], 10, {
+            factorA: prev.factorA,
+            factorB: prev.factorB,
+          })
+        );
         questionStartTimeRef.current = performance.now();
         setCurrentLevel((prev) => prev + 1);
       }, 1600);

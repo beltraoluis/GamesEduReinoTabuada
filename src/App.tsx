@@ -25,6 +25,41 @@ type AppView =
   | 'achievements'
   | 'certificate';
 
+const STORAGE_KEY = 'tabuada_magica_progress';
+
+const isStringArray = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.every((x) => typeof x === 'string');
+
+const isNumberRecord = (v: unknown): v is Record<string, number> =>
+  typeof v === 'object' &&
+  v !== null &&
+  !Array.isArray(v) &&
+  Object.values(v).every((x) => typeof x === 'number' && Number.isFinite(x));
+
+// Shallow-merge saved data over defaults, keeping only fields of the right type.
+function sanitizeProgress(raw: unknown): PlayerProgress {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return DEFAULT_PROGRESS;
+  const data = raw as Record<string, unknown>;
+  const result: PlayerProgress = { ...DEFAULT_PROGRESS };
+  (Object.keys(DEFAULT_PROGRESS) as (keyof PlayerProgress)[]).forEach((key) => {
+    const def = DEFAULT_PROGRESS[key];
+    const val = data[key];
+    if (Array.isArray(def)) {
+      if (isStringArray(val)) (result as unknown as Record<string, unknown>)[key] = val;
+    } else if (typeof def === 'object' && def !== null) {
+      if (isNumberRecord(val)) (result as unknown as Record<string, unknown>)[key] = val;
+    } else if (typeof def === 'number') {
+      if (typeof val === 'number' && Number.isFinite(val)) (result as unknown as Record<string, unknown>)[key] = val;
+    } else if (typeof val === typeof def) {
+      (result as unknown as Record<string, unknown>)[key] = val;
+    }
+  });
+  return result;
+}
+
+// Views with a running game: ESC must not silently discard progress there.
+const GAME_VIEWS: AppView[] = ['runner', 'balloons', 'cauldron'];
+
 export default function App() {
   const [currentView, setCurrentView] = useState<AppView>('title');
   const [selectedWorld, setSelectedWorld] = useState<WorldConfig>(WORLDS[0]);
@@ -32,9 +67,9 @@ export default function App() {
   // Load progress from localStorage or default
   const [progress, setProgress] = useState<PlayerProgress>(() => {
     try {
-      const saved = localStorage.getItem('tabuada_magica_progress');
+      const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        return sanitizeProgress(JSON.parse(saved));
       }
     } catch {
       // ignore
@@ -45,7 +80,7 @@ export default function App() {
   // Save progress changes to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('tabuada_magica_progress', JSON.stringify(progress));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
     } catch {
       // ignore
     }
@@ -54,7 +89,7 @@ export default function App() {
   // Global ESC key to return to title
   useEffect(() => {
     const handleGlobalKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && currentView !== 'title') {
+      if (e.key === 'Escape' && currentView !== 'title' && !GAME_VIEWS.includes(currentView)) {
         soundManager.playBloop(350);
         setCurrentView('title');
       }
@@ -149,21 +184,27 @@ export default function App() {
   };
 
   const handleUnlockMascot = (mascotId: string, cost: number) => {
-    setProgress((prev) => ({
-      ...prev,
-      gems: prev.gems - cost,
-      unlockedMascots: [...prev.unlockedMascots, mascotId],
-      selectedMascot: mascotId,
-    }));
+    setProgress((prev) => {
+      if (cost < 0 || prev.gems < cost || prev.unlockedMascots.includes(mascotId)) return prev;
+      return {
+        ...prev,
+        gems: prev.gems - cost,
+        unlockedMascots: [...prev.unlockedMascots, mascotId],
+        selectedMascot: mascotId,
+      };
+    });
   };
 
   const handleUnlockAccessory = (hatId: string, cost: number) => {
-    setProgress((prev) => ({
-      ...prev,
-      gems: prev.gems - cost,
-      unlockedAccessories: [...prev.unlockedAccessories, hatId],
-      selectedHat: hatId,
-    }));
+    setProgress((prev) => {
+      if (cost < 0 || prev.gems < cost || prev.unlockedAccessories.includes(hatId)) return prev;
+      return {
+        ...prev,
+        gems: prev.gems - cost,
+        unlockedAccessories: [...prev.unlockedAccessories, hatId],
+        selectedHat: hatId,
+      };
+    });
   };
 
   const handleLabAchievement = () => {
