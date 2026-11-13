@@ -49,6 +49,9 @@ function difficultyScore(q: ReturnType<typeof generateChallengeSession>[number])
   return rank * 100 + Math.log2(q.answer + 1);
 }
 
+// Simulations over thousands of sessions take ~5s locally and longer on slower CI runners.
+const HEAVY_TEST_TIMEOUT_MS = 60_000;
+
 describe('challenge generation', () => {
   it('verifies 2000 fresh sessions with independent arithmetic, traps, ramps and phase invariants', () => {
     const orders = new Set<string>();
@@ -127,14 +130,14 @@ describe('challenge generation', () => {
       // 0.1 score point allows tiny sampling variation for adjacent equal-rank kinds.
       expect(phase[i] / 2000 + 0.1).toBeGreaterThanOrEqual(phase[i - 1] / 2000);
     }
-  });
+  }, HEAVY_TEST_TIMEOUT_MS);
   it('produces clean per-kind speech for 5000 sessions without name or mathematical symbols', () => {
     for (let seed = 1; seed <= 5000; seed++) for (const q of generateChallengeSession(seeded(seed))) {
       expect(q.speechText).not.toMatch(/[=×÷²()+−]|R\$|MMC|MDC|\d\s*qual|[a-záéíóúãõç]\?[a-záéíóúãõç]|Aventureiro|\bAna\b|yoda/i);
       expect(q.speechText.endsWith('?')).toBe(true);
       expect(q.speechText).not.toMatch(/\dqual é o número/i);
     }
-  });
+  }, HEAVY_TEST_TIMEOUT_MS);
   it('is deterministic and terminates with constant random input', () => {
     expect(generateChallengeSession(seeded(3))).toEqual(generateChallengeSession(seeded(3)));
     expect(generateChallengeSession(() => 0)).toHaveLength(24);
