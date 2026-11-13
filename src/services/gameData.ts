@@ -1,7 +1,8 @@
 import wizardHatImg from '../assets/hats/wizard-hat.svg';
+import sunglassesImg from '../assets/accessories/sunglasses.svg';
 import pipImg from '../assets/mascots/pip.svg';
 import dinoImg from '../assets/mascots/dino.svg';
-import type { MascotSkin } from '../types/game';
+import type { MascotAccessory, MascotSkin } from '../types/game';
 
 export const MASCOT_LIST: MascotSkin[] = [
   { id: 'pip', name: 'Pip, o Esquilo Feiticeiro', emoji: '🐿️', image: pipImg, color: 'bg-amber-100 border-amber-400 text-amber-900', unlocked: true, cost: 0 },
@@ -11,20 +12,13 @@ export const MASCOT_LIST: MascotSkin[] = [
   { id: 'estrela', name: 'Gatito, o Mago Cósmico', emoji: '🐱', color: 'bg-indigo-100 border-indigo-400 text-indigo-900', unlocked: false, cost: 40 },
 ];
 
-export const ACCESSORY_HATS: Array<{
-  id: string;
-  name: string;
-  emoji: string;
-  image?: string;
-  cost: number;
-  unlocked: boolean;
-}> = [
-  { id: 'none', name: 'Sem Chapéu', emoji: '✖️', cost: 0, unlocked: true },
-  { id: 'wizard', name: 'Chapéu Mágico de Estrelas', emoji: '🧙‍♂️', image: wizardHatImg, cost: 10, unlocked: false },
-  { id: 'crown', name: 'Coroa Dourada Real', emoji: '👑', cost: 20, unlocked: false },
-  { id: 'cap', name: 'Boné Radical', emoji: '🧢', cost: 8, unlocked: false },
-  { id: 'headphones', name: 'Fones de Ouvido Gamer', emoji: '🎧', cost: 15, unlocked: false },
-  { id: 'flower', name: 'Florzinha Encantada', emoji: '🌸', cost: 5, unlocked: false },
+export const ACCESSORY_HATS: MascotAccessory[] = [
+  { id: 'none', name: 'Sem Chapéu', type: 'hat', emoji: '✖️', cost: 0, unlocked: true },
+  { id: 'wizard', name: 'Chapéu Mágico de Estrelas', type: 'hat', emoji: '🧙‍♂️', image: wizardHatImg, cost: 10, unlocked: false },
+  { id: 'crown', name: 'Coroa Dourada Real', type: 'hat', emoji: '👑', cost: 20, unlocked: false },
+  { id: 'cap', name: 'Boné Radical', type: 'hat', emoji: '🧢', cost: 8, unlocked: false },
+  { id: 'sunglasses', name: 'Óculos Escuros Maneiros', type: 'glasses', emoji: '🕶️', image: sunglassesImg, cost: 15, unlocked: false },
+  { id: 'flower', name: 'Florzinha Encantada', type: 'hat', emoji: '🌸', cost: 5, unlocked: false },
 ];
 
 export const DEFAULT_PROGRESS: {

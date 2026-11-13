@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 42" fill="none">
+  <!-- Thin temples (arms) -->
+  <path
+    d="M3 12C5 9.5 8 9 12 10L16 12"
+    stroke="#0F172A"
+    stroke-width="3.5"
+    stroke-linecap="round"
+  />
+  <path
+    d="M97 12C95 9.5 92 9 88 10L84 12"
+    stroke="#0F172A"
+    stroke-width="3.5"
+    stroke-linecap="round"
+  />
+
+  <!-- Top frame bar & bridge -->
+  <path
+    d="M11 10.5C11 7.5 14 6 19 6H39C43 6 45 8 46.5 11.5C47.8 10 52.2 10 53.5 11.5C55 8 57 6 61 6H81C86 6 89 7.5 89 10.5L87 21C85.5 31 78.5 36 69 36C59.5 36 54 30.5 53 21.5C52.5 17 51.5 15.5 50 15.5C48.5 15.5 47.5 17 47 21.5C46 30.5 40.5 36 31 36C21.5 36 14.5 31 13 21Z"
+    fill="#1E293B"
+    stroke="#0F172A"
+    stroke-width="2.5"
+    stroke-linejoin="round"
+  />
+
+  <!-- Left rounded dark lens -->
+  <path
+    d="M15.5 12C15.5 10.2 17 9 19.5 9H38.5C41.2 9 43 10.5 43.2 13.5C43.5 17.5 43 22 41.5 25.5C39.5 30 35.5 32.5 30.5 32.5C24.5 32.5 19.5 29.5 17.5 24C16 20 15.5 15.5 15.5 12Z"
+    fill="#0F172A"
+  />
+
+  <!-- Right rounded dark lens -->
+  <path
+    d="M56.8 13.5C57 10.5 58.8 9 61.5 9H80.5C83 9 84.5 10.2 84.5 12C84.5 15.5 84 20 82.5 24C80.5 29.5 75.5 32.5 69.5 32.5C64.5 32.5 60.5 30 58.5 25.5C57 22 56.5 17.5 56.8 13.5Z"
+    fill="#0F172A"
+  />
+
+  <!-- Subtle diagonal lens highlights (readable at 16-64px) -->
+  <path
+    d="M21 13.5L26.5 13L20.5 24.5L17.5 21Z"
+    fill="#E0F2FE"
+    opacity="0.45"
+  />
+  <path
+    d="M28.5 13L31.5 13L25.5 25.5L23.5 25Z"
+    fill="#E0F2FE"
+    opacity="0.28"
+  />
+  <path
+    d="M62.5 13.5L68 13L62 24.5L59 21Z"
+    fill="#E0F2FE"
+    opacity="0.45"
+  />
+  <path
+    d="M70 13L73 13L67 25.5L65 25Z"
+    fill="#E0F2FE"
+    opacity="0.28"
+  />
+</svg>

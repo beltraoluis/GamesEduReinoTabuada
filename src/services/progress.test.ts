@@ -226,6 +226,24 @@ describe('sanitizeProgress selection fallbacks', () => {
   it('falls back when the unlock list that contained the selection is dropped', () => {
     expect(sanitizeProgress({ unlockedMascots: ['bogus'], selectedMascot: 'bogus' }).selectedMascot).toBe('pip');
   });
+
+  it('migrates legacy headphones accessory id to sunglasses while keeping unlocks', () => {
+    const p = sanitizeProgress({
+      unlockedAccessories: ['none', 'crown', 'headphones'],
+      selectedHat: 'headphones',
+    });
+    expect(p.unlockedAccessories).toEqual(['none', 'crown', 'sunglasses']);
+    expect(p.selectedHat).toBe('sunglasses');
+  });
+
+  it('does not equip sunglasses when legacy headphones was not unlocked', () => {
+    const p = sanitizeProgress({
+      unlockedAccessories: ['none', 'crown'],
+      selectedHat: 'headphones',
+    });
+    expect(p.unlockedAccessories).toEqual(['none', 'crown']);
+    expect(p.selectedHat).toBe('none');
+  });
 });
 
 describe('sanitizeProgress completedLevels', () => {

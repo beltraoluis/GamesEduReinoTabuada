@@ -30,13 +30,23 @@ const filterIds = (v: unknown, known: string[], defaults: string[]): string[] =>
   return [...out];
 };
 
+const LEGACY_ACCESSORY_ID_MAP: Record<string, string> = {
+  headphones: 'sunglasses',
+};
+
+const migrateAccessoryId = (id: unknown): unknown =>
+  typeof id === 'string' ? (LEGACY_ACCESSORY_ID_MAP[id] ?? id) : id;
+
 // Validate and clamp saved data; anything unknown or out of range falls back to defaults.
 export function sanitizeProgress(raw: unknown): PlayerProgress {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return DEFAULT_PROGRESS;
   const d = raw as Record<string, unknown>;
 
   const unlockedMascots = filterIds(d.unlockedMascots, MASCOT_LIST.map((m) => m.id), DEFAULT_PROGRESS.unlockedMascots);
-  const unlockedAccessories = filterIds(d.unlockedAccessories, ACCESSORY_HATS.map((h) => h.id), DEFAULT_PROGRESS.unlockedAccessories);
+  const rawAccessories = Array.isArray(d.unlockedAccessories)
+    ? d.unlockedAccessories.map(migrateAccessoryId)
+    : d.unlockedAccessories;
+  const unlockedAccessories = filterIds(rawAccessories, ACCESSORY_HATS.map((h) => h.id), DEFAULT_PROGRESS.unlockedAccessories);
   const unlockedAchievements = filterIds(d.unlockedAchievements, ACHIEVEMENTS_LIST.map((a) => a.id), DEFAULT_PROGRESS.unlockedAchievements);
 
   const completedLevels: Record<string, number> = {};
@@ -51,9 +61,10 @@ export function sanitizeProgress(raw: unknown): PlayerProgress {
     typeof d.selectedMascot === 'string' && unlockedMascots.includes(d.selectedMascot)
       ? d.selectedMascot
       : DEFAULT_PROGRESS.selectedMascot;
+  const migratedHat = migrateAccessoryId(d.selectedHat);
   const selectedHat =
-    typeof d.selectedHat === 'string' && unlockedAccessories.includes(d.selectedHat)
-      ? d.selectedHat
+    typeof migratedHat === 'string' && unlockedAccessories.includes(migratedHat)
+      ? migratedHat
       : DEFAULT_PROGRESS.selectedHat;
 
   return {
