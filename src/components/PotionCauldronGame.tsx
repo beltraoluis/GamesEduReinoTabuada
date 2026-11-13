@@ -97,8 +97,8 @@ export const PotionCauldronGame: React.FC<PotionCauldronGameProps> = ({ onBack, 
   return (
     <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 bg-gradient-to-b from-indigo-900 via-purple-900 to-slate-900 rounded-3xl shadow-2xl border-4 border-purple-400 text-white relative overflow-hidden">
       {/* Decorative stars in background */}
-      <div className="absolute top-4 left-6 text-2xl animate-pulse">✨</div>
-      <div className="absolute top-10 right-10 text-xl animate-pulse" style={{ animationDelay: '1s' }}>⭐</div>
+      <div className="absolute top-28 left-6 text-2xl animate-pulse pointer-events-none" aria-hidden="true">✨</div>
+      <div className="absolute top-32 right-10 text-xl animate-pulse pointer-events-none" style={{ animationDelay: '1s' }} aria-hidden="true">⭐</div>
       <div className="absolute bottom-12 left-10 text-3xl animate-pulse" style={{ animationDelay: '1.5s' }}>🔮</div>
 
       {/* Header */}
