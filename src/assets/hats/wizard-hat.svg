@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Wide curved brim (back/under-rim shadow) -->
+  <ellipse cx="50" cy="80" rx="43" ry="12" fill="#4C1D95" />
+  <!-- Wide curved brim (main top surface) -->
+  <path
+    d="M8 78C8 71 26 66 50 66C74 66 92 71 92 78C92 84 74 87 50 87C26 87 8 84 8 78Z"
+    fill="#6D28D9"
+  />
+  <!-- Subtle brim highlight -->
+  <path
+    d="M13 77C17 72 32 69 50 69C68 69 83 72 87 77"
+    stroke="#8B5CF6"
+    stroke-width="2.5"
+    stroke-linecap="round"
+  />
+
+  <!-- Tall pointed cone with a whimsical bend to the right -->
+  <path
+    d="M26 71C28 51 35 31 48 16C54 9 63 6 70 9C75 11 76 16 71 19C65 22 61 28 62 36C64 49 70 60 74 71Z"
+    fill="#5B21B6"
+  />
+  <!-- Left-side flat-vector highlight on the cone -->
+  <path
+    d="M29 70C31 51 38 32 50 18C55 12 62 9 68 10C60 12 53 19 48 29C42 42 38 56 36 70Z"
+    fill="#7C3AED"
+  />
+
+  <!-- Golden band wrapping the base of the cone -->
+  <path
+    d="M25.5 64C39 67.5 61 67.5 74.5 64L76.5 72.5C61 76.5 39 76.5 23.5 72.5Z"
+    fill="#F59E0B"
+  />
+  <!-- Golden band top highlight -->
+  <path
+    d="M26.5 66C39.5 69.2 60.5 69.2 73.5 66"
+    stroke="#FDE047"
+    stroke-width="2"
+    stroke-linecap="round"
+  />
+  <!-- Center buckle/gem on the band -->
+  <rect x="45" y="64.5" width="10" height="9" rx="2.5" fill="#FDE047" stroke="#D97706" stroke-width="1.8" />
+
+  <!-- Cute yellow crescent moon on upper cone -->
+  <path
+    d="M54 27C49.5 27.5 46.5 31.5 47 36C47.5 40.5 51.5 43.5 56 43C53.2 41.8 51.4 39 51.5 35.8C51.6 32.5 53.6 29.8 56.5 28.5C55.7 27.5 54.9 27 54 27Z"
+    fill="#FDE047"
+  />
+
+  <!-- Yellow stars (bold enough to read at 16-24px) -->
+  <path
+    d="M40 46L41.8 50L46 50.5L42.8 53.4L43.7 57.6L40 55.4L36.3 57.6L37.2 53.4L34 50.5L38.2 50Z"
+    fill="#FDE047"
+  />
+  <path
+    d="M59 47L60.3 49.8L63.3 50.2L61.1 52.3L61.7 55.3L59 53.8L56.3 55.3L56.9 52.3L54.7 50.2L57.7 49.8Z"
+    fill="#FACC15"
+  />
+  <circle cx="46" cy="23" r="2" fill="#FEF08A" />
+</svg>

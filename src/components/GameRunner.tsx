@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, Volume2, Sparkles, Heart, Zap, RefreshCw, Trophy, ArrowRight, Star, Timer } from 'lucide-react';
 import { Question, WorldConfig } from '../types/game';
 import { generateQuestion, MASCOT_LIST } from '../services/mathEngine';
+import { gemsForCorrectAnswer, finalizeGems, WORLD_GEM_MULTIPLIERS } from '../services/rewards';
+import { buildGemSummary, formatAnswerGems } from '../services/gemSummary';
 import { soundManager } from '../services/sound';
 import { MascotBadge } from './MascotBadge';
 import confetti from 'canvas-confetti';
@@ -34,7 +36,8 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
   const [score, setScore] = useState<number>(0);
   const [streak, setStreak] = useState<number>(0);
   const [lives, setLives] = useState<number>(3);
-  const [gemsCollected, setGemsCollected] = useState<number>(0);
+  const [rawGems, setRawGems] = useState<number>(0);
+  const [wrongAnswers, setWrongAnswers] = useState<number>(0);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [isVictory, setIsVictory] = useState<boolean>(false);
   const [showHelperFeedback, setShowHelperFeedback] = useState<string | null>(null);
@@ -55,7 +58,12 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
   const distanceToGateRef = useRef<number>(100);
   const timeoutTriggeredRef = useRef<boolean>(false);
   const questionStartTimeRef = useRef<number>(performance.now());
+  const answerElapsedSecRef = useRef<number>(ROUND_TIMER_SECONDS);
+  // Retrying a missed question: the answer was just shown in the helper modal, so no speed bonus.
+  const isRetryRoundRef = useRef<boolean>(false);
   const speedBonusRef = useRef<number>(0);
+  const rawGemsRef = useRef<number>(0);
+  const wrongAnswersRef = useRef<number>(0);
 
   // Clean up return timeout on unmount
   useEffect(() => {
@@ -75,35 +83,54 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
     roundTimerRef.current = ROUND_TIMER_SECONDS;
     timeoutTriggeredRef.current = false;
     questionStartTimeRef.current = performance.now();
+    answerElapsedSecRef.current = ROUND_TIMER_SECONDS;
     speedBonusRef.current = 0;
+    isRetryRoundRef.current = false;
     setRoundTimer(ROUND_TIMER_SECONDS);
   }, [currentQuestion]);
 
-  // Smoothly return mascot to right corner, then show the next 3 numbers
-  const returnMascotThenAdvance = useCallback(() => {
-    setRoundPhase('returning');
-    setPlayerLane(null); // Mascot glides back to the right corner!
+  // Smoothly return mascot to right corner, then advance to the next question or retry the current one
+  const returnMascotThenAdvance = useCallback(
+    (advanceQuestion = true) => {
+      setRoundPhase('returning');
+      setPlayerLane(null); // Mascot glides back to the right corner!
 
-    if (returnTimeoutRef.current !== null) {
-      clearTimeout(returnTimeoutRef.current);
-    }
+      if (returnTimeoutRef.current !== null) {
+        clearTimeout(returnTimeoutRef.current);
+      }
 
-    returnTimeoutRef.current = window.setTimeout(() => {
-      distanceToGateRef.current = 100;
-      setDistanceToGate(100);
-      roundTimerRef.current = ROUND_TIMER_SECONDS;
-      timeoutTriggeredRef.current = false;
-      setRoundTimer(ROUND_TIMER_SECONDS);
-      setQuestionIndex((prev) => prev + 1);
-      setCurrentQuestion(generateQuestion(world.tables));
-      setRoundPhase('choosing');
-      returnTimeoutRef.current = null;
-    }, 650);
-  }, [world.tables]);
+      returnTimeoutRef.current = window.setTimeout(() => {
+        distanceToGateRef.current = 100;
+        setDistanceToGate(100);
+        roundTimerRef.current = ROUND_TIMER_SECONDS;
+        timeoutTriggeredRef.current = false;
+        questionStartTimeRef.current = performance.now();
+        answerElapsedSecRef.current = ROUND_TIMER_SECONDS;
+        speedBonusRef.current = 0;
+        setRoundTimer(ROUND_TIMER_SECONDS);
+        isRetryRoundRef.current = !advanceQuestion;
+        if (advanceQuestion) {
+          setQuestionIndex((prev) => prev + 1);
+          setCurrentQuestion((prev) =>
+            generateQuestion(world.tables, 10, { factorA: prev.factorA, factorB: prev.factorB })
+          );
+        }
+        setRoundPhase('choosing');
+        returnTimeoutRef.current = null;
+      }, 650);
+    },
+    [world.tables]
+  );
 
   // Capture speed bonus at the moment the player picks a lane
   const captureSpeedBonus = useCallback(() => {
-    const elapsedSec = (performance.now() - questionStartTimeRef.current) / 1000;
+    const elapsedSec = Math.max(0, (performance.now() - questionStartTimeRef.current) / 1000);
+    answerElapsedSecRef.current = elapsedSec;
+    if (isRetryRoundRef.current) {
+      answerElapsedSecRef.current = ROUND_TIMER_SECONDS;
+      speedBonusRef.current = 0;
+      return;
+    }
     if (distanceToGateRef.current > 14) {
       // Answered before the portals even reached the bottom!
       speedBonusRef.current = elapsedSec <= 2.5 ? 60 : 50;
@@ -174,6 +201,9 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
     setShake(true);
     setTimeout(() => setShake(false), 400);
     setStreak(0);
+    const nextWrong = wrongAnswersRef.current + 1;
+    wrongAnswersRef.current = nextWrong;
+    setWrongAnswers(nextWrong);
 
     const newLives = lives - 1;
     setLives(newLives);
@@ -201,19 +231,28 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
         const streakBonus = Math.min(newStreak * 10, 50);
         const speedBonus = speedBonusRef.current;
         const points = 100 + streakBonus + speedBonus;
-        const extraGem = speedBonus >= 50 ? 1 : 0;
+        const answerGems = gemsForCorrectAnswer({
+          factorA: currentQuestion.factorA,
+          factorB: currentQuestion.factorB,
+          worldMultiplier: WORLD_GEM_MULTIPLIERS[world.id] ?? 1,
+          elapsedSec: answerElapsedSecRef.current,
+          timeLimitSec: ROUND_TIMER_SECONDS,
+        });
+        const nextRawGems = rawGemsRef.current + answerGems;
+        rawGemsRef.current = nextRawGems;
         setScore((prev) => prev + points);
-        setGemsCollected((prev) => prev + 2 + extraGem);
+        setRawGems(nextRawGems);
 
         // Praise messages showing speed bonus when earned
         const praises = ['Incrível! ⭐', 'Muito Bem! 🚀', 'Genial! ⚡', 'Fantástico! 🌈', 'Mente Brilhante! 💎'];
         const basePraise = praises[Math.min(praises.length - 1, newStreak - 1)];
+        const gemLabel = `+${formatAnswerGems(answerGems)} 💎`;
         const fullPraise =
           speedBonus >= 50
-            ? `⚡ Super Rápido! +${points} pts`
+            ? `⚡ Super Rápido! +${points} pts · ${gemLabel}`
             : speedBonus > 0
-            ? `${basePraise} +${points} pts ⚡`
-            : `${basePraise} +${points} pts`;
+            ? `${basePraise} +${points} pts ⚡ · ${gemLabel}`
+            : `${basePraise} +${points} pts · ${gemLabel}`;
         setPraiseText(fullPraise);
         setTimeout(() => setPraiseText(null), 1200);
 
@@ -244,6 +283,9 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
         setShake(true);
         setTimeout(() => setShake(false), 400);
         setStreak(0);
+        const nextWrong = wrongAnswersRef.current + 1;
+        wrongAnswersRef.current = nextWrong;
+        setWrongAnswers(nextWrong);
 
         const newLives = lives - 1;
         setLives(newLives);
@@ -258,7 +300,7 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
         }
       }
     },
-    [currentQuestion, lives, questionIndex, returnMascotThenAdvance, streak]
+    [currentQuestion, lives, questionIndex, returnMascotThenAdvance, streak, world.id]
   );
 
   // Game Loop for continuous smooth approach of the gates (30% slower) & 5s round timer
@@ -334,7 +376,12 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
     setScore(0);
     setStreak(0);
     setLives(3);
-    setGemsCollected(0);
+    rawGemsRef.current = 0;
+    wrongAnswersRef.current = 0;
+    answerElapsedSecRef.current = ROUND_TIMER_SECONDS;
+    isRetryRoundRef.current = false;
+    setRawGems(0);
+    setWrongAnswers(0);
     setIsGameOver(false);
     setIsVictory(false);
     setShowHelperFeedback(null);
@@ -342,12 +389,15 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
     setDistanceToGate(100);
   };
 
+  const projectedGems = finalizeGems(rawGems, wrongAnswers);
+  const gemSummary = buildGemSummary(rawGems, wrongAnswers);
+
   const handleClaimVictory = () => {
     let earnedStars = 1;
     if (lives === 3) earnedStars = 3;
     else if (lives === 2) earnedStars = 2;
 
-    onFinishRun(earnedStars, gemsCollected, score);
+    onFinishRun(earnedStars, gemSummary.finalGems, score);
   };
 
   return (
@@ -400,6 +450,15 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
           <div className="bg-amber-400 text-yellow-950 px-3 py-1 rounded-xl font-black text-sm tabular-nums shadow-sm flex items-center gap-1">
             <span>⭐</span>
             <span>{score} pts</span>
+          </div>
+
+          <div
+            className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-xl font-black text-sm tabular-nums shadow-sm border border-emerald-300 flex items-center gap-1"
+            data-testid="hud-gems"
+            aria-label={`Gemas estimadas na rodada: ${projectedGems}`}
+          >
+            <span>💎</span>
+            <span>{projectedGems}</span>
           </div>
         </div>
       </div>
@@ -594,8 +653,8 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
               onClick={() => {
                 soundManager.playBloop(500);
                 setShowHelperFeedback(null);
-                if (questionIndex + 1 < TOTAL_QUESTIONS_PER_STAGE) {
-                  returnMascotThenAdvance();
+                if (!isGameOver) {
+                  returnMascotThenAdvance(questionIndex + 1 < TOTAL_QUESTIONS_PER_STAGE);
                 }
               }}
               className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-lg rounded-2xl shadow-lg hover:from-amber-600 hover:to-orange-600 transition-transform active:scale-95"
@@ -612,8 +671,11 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
           <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl border-4 border-rose-400">
             <div className="text-6xl mb-3">💪</div>
             <h3 className="text-3xl font-black font-fun text-slate-900 mb-2">Bom Treino!</h3>
-            <p className="text-slate-600 font-bold mb-4">
+            <p className="text-slate-600 font-bold mb-2">
               Você marcou <strong className="text-amber-600">{score} pontos</strong>! Praticar é o segredo dos verdadeiros mestres da tabuada.
+            </p>
+            <p className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 mb-4">
+              Conclua o reino para ganhar gemas! 💎
             </p>
             <div className="flex gap-3">
               <button
@@ -658,15 +720,21 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
               ))}
             </div>
 
-            <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 mb-6 flex justify-around">
-              <div>
-                <span className="text-xs font-bold text-slate-500 uppercase block">Pontos</span>
-                <span className="text-2xl font-black text-amber-600">{score}</span>
+            <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 mb-6">
+              <div className="flex justify-around">
+                <div>
+                  <span className="text-xs font-bold text-slate-500 uppercase block">Pontos</span>
+                  <span className="text-2xl font-black text-amber-600">{score}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-500 uppercase block">Gemas Ganhas</span>
+                  <span className="text-2xl font-black text-emerald-600">+{gemSummary.finalGems} 💎</span>
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-bold text-slate-500 uppercase block">Gemas Ganhas</span>
-                <span className="text-2xl font-black text-emerald-600">+{gemsCollected} 💎</span>
-              </div>
+              {gemSummary.penaltyNote && (
+                <p className="text-xs font-bold text-rose-600 mt-3">{gemSummary.penaltyNote}</p>
+              )}
+              <p className="text-xs font-semibold text-slate-500 mt-2">{gemSummary.tipText}</p>
             </div>
 
             <button

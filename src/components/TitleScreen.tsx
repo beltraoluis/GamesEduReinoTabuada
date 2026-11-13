@@ -183,7 +183,10 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         <div
           onClick={() => {
             soundManager.playBloop(600);
-            soundManager.speak(`Olá ${progress.playerName}! Vamos jogar a tabuada juntos?`);
+            soundManager.speak(
+              `Olá ${progress.playerName}! Vamos jogar a tabuada juntos?`,
+              'Olá! Vamos jogar a tabuada juntos?'
+            );
           }}
           className="cursor-pointer group flex flex-col items-center my-1"
           title="Clique para ouvir o mascote!"

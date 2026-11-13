@@ -1,22 +1,49 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
-import {defineConfig} from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 
-export default defineConfig(() => {
+const CSP_CONTENT = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'none'",
+  'worker-src blob:',
+  'child-src blob:',
+].join('; ') + ';';
+
+function buildSecurityMetaPlugin(): Plugin {
   return {
-    plugins: [react(), tailwindcss()],
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
-      },
-    },
-    server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modify—file watching is disabled to prevent flickering during agent edits.
-      hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+    name: 'build-security-meta',
+    apply: 'build',
+    transformIndexHtml() {
+      return [
+        {
+          tag: 'meta',
+          attrs: {
+            'http-equiv': 'Content-Security-Policy',
+            content: CSP_CONTENT,
+          },
+          injectTo: 'head-prepend',
+        },
+        {
+          tag: 'meta',
+          attrs: {
+            name: 'referrer',
+            content: 'no-referrer',
+          },
+          injectTo: 'head-prepend',
+        },
+      ];
     },
   };
+}
+
+export default defineConfig({
+  base: process.env.VITE_BASE || '/GamesEduReinoTabuada/',
+  plugins: [react(), tailwindcss(), buildSecurityMetaPlugin()],
 });

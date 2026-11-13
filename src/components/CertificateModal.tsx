@@ -8,6 +8,7 @@ interface CertificateModalProps {
   selectedMascot: string;
   selectedHat: string;
   totalStars: number;
+  challengeTitle?: string | null;
   onBack: () => void;
 }
 
@@ -16,6 +17,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
   selectedMascot,
   selectedHat,
   totalStars,
+  challengeTitle,
   onBack,
 }) => {
   const handlePrint = () => {
@@ -86,6 +88,12 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
         <p className="text-base sm:text-lg text-slate-700 font-medium max-w-xl mx-auto leading-relaxed mt-3">
           Completou com louvor as missões matemáticas de multiplicação, dominando o raciocínio das tabuadas, agrupamentos visuais e cálculo mental com muita criatividade!
         </p>
+
+        {challengeTitle && (
+          <div className="mt-4 inline-flex items-center gap-2 px-5 py-2 rounded-full bg-purple-100 border-2 border-purple-400 text-purple-900 font-black text-sm sm:text-base shadow-xs">
+            <span>Título conquistado: {challengeTitle} 🗼</span>
+          </div>
+        )}
 
         {/* Mascot & Stats Showcase */}
         <div className="my-8 flex flex-wrap items-center justify-center gap-8">

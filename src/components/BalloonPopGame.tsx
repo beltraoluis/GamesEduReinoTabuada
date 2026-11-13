@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowLeft, Volume2, Timer, Sparkles, Trophy, RotateCcw } from 'lucide-react';
 import { Question } from '../types/game';
 import { generateQuestion } from '../services/mathEngine';
+import { gemsForFreePlayCorrectAnswer, finalizeFreePlayGems } from '../services/rewards';
+import { buildFreePlayGemSummary } from '../services/gemSummary';
 import { soundManager } from '../services/sound';
 import confetti from 'canvas-confetti';
 
@@ -24,6 +26,9 @@ const BALLOON_COLORS = [
   'from-pink-400 to-pink-600 border-pink-300',
 ];
 
+// Reference per-question time limit so answer speed scales gem rewards (matches the 6s speed threshold).
+const BALLOON_QUESTION_TIME_LIMIT_SEC = 6;
+
 interface BalloonPopGameProps {
   onBack: () => void;
   onFinishGame: (score: number, gems: number) => void;
@@ -38,10 +43,14 @@ export const BalloonPopGame: React.FC<BalloonPopGameProps> = ({ onBack, onFinish
   const [timeLeft, setTimeLeft] = useState<number>(60);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [totalPopped, setTotalPopped] = useState<number>(0);
+  const [rawGems, setRawGems] = useState<number>(0);
+  const [wrongAnswers, setWrongAnswers] = useState<number>(0);
   const [speedToast, setSpeedToast] = useState<string | null>(null);
 
   const requestRef = useRef<number | null>(null);
   const questionStartTimeRef = useRef<number>(performance.now());
+  const rawGemsRef = useRef<number>(0);
+  const wrongAnswersRef = useRef<number>(0);
 
   // Generate balloons whenever the question changes
   const spawnBalloonsForQuestion = useCallback((q: Question) => {
@@ -136,20 +145,31 @@ export const BalloonPopGame: React.FC<BalloonPopGameProps> = ({ onBack, onFinish
       const elapsedSec = (performance.now() - questionStartTimeRef.current) / 1000;
       const speedBonus = elapsedSec < 2 ? 50 : elapsedSec < 4 ? 30 : elapsedSec < 6 ? 15 : 0;
       const points = 100 + newCombo * 15 + speedBonus;
+      const answerGems = gemsForFreePlayCorrectAnswer({
+        factorA: question.factorA,
+        factorB: question.factorB,
+        elapsedSec,
+        timeLimitSec: BALLOON_QUESTION_TIME_LIMIT_SEC,
+      });
+      const nextRawGems = rawGemsRef.current + answerGems;
+      rawGemsRef.current = nextRawGems;
+      setRawGems(nextRawGems);
       setScore((prev) => prev + points);
       setTotalPopped((prev) => prev + 1);
 
-      if (speedBonus > 0) {
-        setSpeedToast(`⚡ Rápido! +${points} pts`);
-        setTimeout(() => setSpeedToast(null), 900);
-      }
+      setSpeedToast(speedBonus > 0 ? `⚡ Rápido! +${points} pts · +💎` : `+${points} pts · +💎`);
+      setTimeout(() => setSpeedToast(null), 900);
 
       // Next Question
-      const nextQ = generateQuestion(selectedTables);
-      setQuestion(nextQ);
+      setQuestion((prev) =>
+        generateQuestion(selectedTables, 10, { factorA: prev.factorA, factorB: prev.factorB })
+      );
     } else {
       soundManager.playWrong();
       setCombo(0);
+      const nextWrong = wrongAnswersRef.current + 1;
+      wrongAnswersRef.current = nextWrong;
+      setWrongAnswers(nextWrong);
     }
   };
 
@@ -158,14 +178,20 @@ export const BalloonPopGame: React.FC<BalloonPopGameProps> = ({ onBack, onFinish
     setCombo(0);
     setTimeLeft(60);
     setTotalPopped(0);
+    rawGemsRef.current = 0;
+    wrongAnswersRef.current = 0;
+    setRawGems(0);
+    setWrongAnswers(0);
     setIsGameOver(false);
     const newQ = generateQuestion(selectedTables);
     setQuestion(newQ);
   };
 
+  const projectedGems = finalizeFreePlayGems(rawGems, wrongAnswers);
+  const gemSummary = buildFreePlayGemSummary(rawGems, wrongAnswers);
+
   const handleFinish = () => {
-    const gems = Math.floor(score / 50);
-    onFinishGame(score, gems);
+    onFinishGame(score, gemSummary.finalGems);
   };
 
   return (
@@ -193,6 +219,14 @@ export const BalloonPopGame: React.FC<BalloonPopGameProps> = ({ onBack, onFinish
 
           <div className="bg-amber-400 text-yellow-950 px-3 py-1 rounded-xl font-black text-sm tabular-nums shadow-sm">
             ⭐ {score} pts
+          </div>
+
+          <div
+            className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-xl font-black text-sm tabular-nums shadow-sm border border-emerald-300"
+            data-testid="hud-gems"
+            aria-label={`Gemas estimadas na rodada: ${projectedGems}`}
+          >
+            💎 {projectedGems}
           </div>
         </div>
       </div>
@@ -286,15 +320,31 @@ export const BalloonPopGame: React.FC<BalloonPopGameProps> = ({ onBack, onFinish
             <h3 className="text-3xl font-black font-fun text-slate-900 mb-1">Tempo Esgotado!</h3>
             <p className="text-slate-600 font-bold mb-4">Você foi super veloz e estourou vários balões!</p>
 
-            <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 mb-6 flex justify-around">
-              <div>
-                <span className="text-xs font-bold text-slate-500 uppercase block">Pontuação</span>
-                <span className="text-2xl font-black text-amber-600">{score} pts</span>
+            <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 mb-6">
+              <div className="flex justify-around gap-2">
+                <div>
+                  <span className="text-xs font-bold text-slate-500 uppercase block">Pontuação</span>
+                  <span className="text-2xl font-black text-amber-600">{score} pts</span>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-500 uppercase block">Acertos</span>
+                  <span className="text-2xl font-black text-sky-600">{totalPopped} 🎈</span>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-500 uppercase block">Gemas Ganhas</span>
+                  <span className="text-2xl font-black text-emerald-600">+{gemSummary.finalGems} 💎</span>
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-bold text-slate-500 uppercase block">Acertos</span>
-                <span className="text-2xl font-black text-sky-600">{totalPopped} 🎈</span>
-              </div>
+              {gemSummary.penaltyNote && (
+                <p className="text-xs font-bold text-rose-600 mt-3">{gemSummary.penaltyNote}</p>
+              )}
+              {gemSummary.capNote && (
+                <p className="text-xs font-bold text-emerald-700 mt-1">{gemSummary.capNote}</p>
+              )}
+              <p className="text-xs font-semibold text-slate-500 mt-2">{gemSummary.tipText}</p>
+              <p className="text-xs font-bold text-amber-800 mt-2">
+                Toque em &quot;Salvar &amp; Voltar&quot; para guardar suas gemas! &quot;Jogar de Novo&quot; ou sair descarta as gemas desta rodada.
+              </p>
             </div>
 
             <div className="flex gap-3">

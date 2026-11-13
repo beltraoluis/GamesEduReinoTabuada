@@ -79,38 +79,85 @@ const FRUIT_ICONS = [
   { icon: '🚀', name: 'foguetes' },
 ];
 
-export function generateQuestion(allowedTables: number[], maxFactor: number = 10): Question {
-  const table = allowedTables[Math.floor(Math.random() * allowedTables.length)];
-  // 3rd graders practice 1 to 10
-  const factorB = Math.floor(Math.random() * maxFactor) + 1;
+export {
+  MASCOT_LIST,
+  ACCESSORY_HATS,
+  DEFAULT_PROGRESS,
+  ACHIEVEMENTS_LIST,
+} from './gameData';
+
+function shuffleArray<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function pickFactorPair(
+  allowedTables: number[],
+  maxFactor: number,
+  previous?: { factorA: number; factorB: number }
+): { factorA: number; factorB: number } {
+  const safeMaxFactor = Math.max(1, Math.floor(maxFactor));
+  const allPairs: Array<{ factorA: number; factorB: number }> = [];
+
+  for (const table of allowedTables) {
+    for (let factorB = 1; factorB <= safeMaxFactor; factorB++) {
+      allPairs.push({ factorA: table, factorB });
+    }
+  }
+
+  const candidatePairs = previous
+    ? allPairs.filter(
+        (pair) => !(pair.factorA === previous.factorA && pair.factorB === previous.factorB)
+      )
+    : allPairs;
+
+  const pool = candidatePairs.length > 0 ? candidatePairs : allPairs;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+export function generateQuestion(
+  allowedTables: number[],
+  maxFactor: number = 10,
+  previous?: { factorA: number; factorB: number }
+): Question {
+  const { factorA: table, factorB } = pickFactorPair(allowedTables, maxFactor, previous);
   const result = table * factorB;
 
   // Plausible distractors:
-  // 1. Common addition mistake: a + b
-  // 2. Off by one multiplication: a * (b - 1) or a * (b + 1)
-  // 3. Close number (+/- 2 or +/- 5)
+  // 1. Off by one multiplication: a * (b - 1) or a * (b + 1)
+  // 2. Off by two multiplication: a * (b - 2) or a * (b + 2)
+  // 3. Adjacent table: (a + 1) * b
+  // 4. Close positive number fallback
   const distractors = new Set<number>();
+  const addDistractor = (value: number) => {
+    if (Number.isFinite(value) && value > 0 && value !== result) {
+      distractors.add(value);
+    }
+  };
 
-  const candidate1 = table * Math.max(1, factorB + (Math.random() > 0.5 ? 1 : -1));
-  if (candidate1 !== result && candidate1 > 0) distractors.add(candidate1);
+  addDistractor(table * Math.max(1, factorB + (Math.random() > 0.5 ? 1 : -1)));
+  addDistractor(table * Math.max(1, factorB + (Math.random() > 0.5 ? 2 : -2)));
+  addDistractor((table + 1) * factorB);
 
-  const candidate2 = table * Math.max(1, factorB + (Math.random() > 0.5 ? 2 : -2));
-  if (candidate2 !== result && candidate2 > 0) distractors.add(candidate2);
-
-  const candidate3 = (table + 1) * factorB;
-  if (candidate3 !== result && candidate3 > 0) distractors.add(candidate3);
-
-  // If we still need distractors:
-  while (distractors.size < 2) {
+  let attempts = 0;
+  while (distractors.size < 2 && attempts < 50) {
     const offset = (Math.floor(Math.random() * 5) + 1) * (Math.random() > 0.5 ? 1 : -1);
-    const d = result + offset;
-    if (d > 0 && d !== result) distractors.add(d);
+    addDistractor(result + offset);
+    attempts++;
   }
 
-  const optionsList = Array.from(distractors).slice(0, 2);
-  optionsList.push(result);
-  // Shuffle options
-  const shuffledOptions = optionsList.sort(() => Math.random() - 0.5);
+  let fallbackOffset = 1;
+  while (distractors.size < 2) {
+    addDistractor(result + fallbackOffset);
+    fallbackOffset++;
+  }
+
+  const optionsList = [...Array.from(distractors).slice(0, 2), result];
+  const shuffledOptions = shuffleArray(optionsList);
 
   const itemTheme = FRUIT_ICONS[Math.floor(Math.random() * FRUIT_ICONS.length)];
 
@@ -135,100 +182,3 @@ export function generateQuestion(allowedTables: number[], maxFactor: number = 10
     },
   };
 }
-
-export const MASCOT_LIST = [
-  { id: 'pip', name: 'Pip, o Esquilo Feiticeiro', emoji: '🐿️', color: 'bg-amber-100 border-amber-400 text-amber-900', unlocked: true, cost: 0 },
-  { id: 'lunna', name: 'Lunna, a Raposinha Estelar', emoji: '🦊', color: 'bg-orange-100 border-orange-400 text-orange-900', unlocked: true, cost: 0 },
-  { id: 'dino', name: 'Dino, o Dragão Brincalhão', emoji: '🦖', color: 'bg-emerald-100 border-emerald-400 text-emerald-900', unlocked: false, cost: 15 },
-  { id: 'sol', name: 'Solzinho, o Ursinho Alquimista', emoji: '🐻', color: 'bg-yellow-100 border-yellow-400 text-yellow-900', unlocked: false, cost: 25 },
-  { id: 'estrela', name: 'Gatito, o Mago Cósmico', emoji: '🐱', color: 'bg-indigo-100 border-indigo-400 text-indigo-900', unlocked: false, cost: 40 },
-];
-
-export const ACCESSORY_HATS = [
-  { id: 'none', name: 'Sem Chapéu', emoji: '✖️', cost: 0, unlocked: true },
-  { id: 'wizard', name: 'Chapéu Mágico de Estrelas', emoji: '🧙‍♂️', cost: 10, unlocked: false },
-  { id: 'crown', name: 'Coroa Dourada Real', emoji: '👑', cost: 20, unlocked: false },
-  { id: 'cap', name: 'Boné Radical', emoji: '🧢', cost: 8, unlocked: false },
-  { id: 'headphones', name: 'Fones de Ouvido Gamer', emoji: '🎧', cost: 15, unlocked: false },
-  { id: 'flower', name: 'Florzinha Encantada', emoji: '🌸', cost: 5, unlocked: false },
-];
-
-export const DEFAULT_PROGRESS: {
-  playerName: string;
-  stars: number;
-  gems: number;
-  highScoreRunner: number;
-  highScoreBalloons: number;
-  highScoreCauldron: number;
-  selectedMascot: string;
-  selectedHat: string;
-  unlockedMascots: string[];
-  unlockedAccessories: string[];
-  completedLevels: Record<string, number>;
-  unlockedAchievements: string[];
-} = {
-  playerName: 'Aventureiro(a)',
-  stars: 0,
-  gems: 10,
-  highScoreRunner: 0,
-  highScoreBalloons: 0,
-  highScoreCauldron: 0,
-  selectedMascot: 'pip',
-  selectedHat: 'none',
-  unlockedMascots: ['pip', 'lunna'],
-  unlockedAccessories: ['none'],
-  completedLevels: {},
-  unlockedAchievements: ['welcome'],
-};
-
-export const ACHIEVEMENTS_LIST = [
-  {
-    id: 'welcome',
-    title: 'Bem-vindo ao Reino!',
-    description: 'Iniciou a mágica jornada da tabuada.',
-    icon: '🎒',
-    maxProgress: 1,
-  },
-  {
-    id: 'first_win',
-    title: 'Primeira Vitória!',
-    description: 'Completou sua primeira fase com estrelas.',
-    icon: '⭐',
-    maxProgress: 1,
-  },
-  {
-    id: 'combo_master',
-    title: 'Super Concentração!',
-    description: 'Alcançou um combo de 5 acertos seguidos sem errar.',
-    icon: '⚡',
-    maxProgress: 5,
-  },
-  {
-    id: 'balloon_pop_10',
-    title: 'Estourador Mágico!',
-    description: 'Estourou 15 balões corretos na Festa dos Balões.',
-    icon: '🎈',
-    maxProgress: 15,
-  },
-  {
-    id: 'lab_explorer',
-    title: 'Cientista dos Números',
-    description: 'Explorou matrizes visuais no Laboratório.',
-    icon: '🔬',
-    maxProgress: 1,
-  },
-  {
-    id: 'world1_master',
-    title: 'Mestre do Dobro & Cinco',
-    description: 'Conquistou 10 estrelas no Vale Verdejante.',
-    icon: '🌿',
-    maxProgress: 10,
-  },
-  {
-    id: 'cauldron_chef',
-    title: 'Alquimista Nota 10',
-    description: 'Preparou 5 poções perfeitas no Caldeirão.',
-    icon: '🧪',
-    maxProgress: 5,
-  },
-];

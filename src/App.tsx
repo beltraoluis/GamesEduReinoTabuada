@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ChallengeRealm } from './components/ChallengeRealm';
 import { TitleScreen } from './components/TitleScreen';
 import { GameRunner } from './components/GameRunner';
 import { BalloonPopGame } from './components/BalloonPopGame';
@@ -9,12 +10,15 @@ import { AchievementsModal } from './components/AchievementsModal';
 import { CertificateModal } from './components/CertificateModal';
 import { WorldSelect } from './components/WorldSelect';
 import { AudioControls } from './components/AudioControls';
-import { PlayerProgress, WorldConfig } from './types/game';
+import { ChallengeResult, PlayerProgress, WorldConfig } from './types/game';
 import { DEFAULT_PROGRESS, WORLDS } from './services/mathEngine';
 import { soundManager } from './services/sound';
+import { sanitizeProgress, sanitizeName, recordWorldCompletion, unlockMascot, unlockAccessory, purchaseChallenge, recordChallengeResult, bestChallengeTitle } from './services/progress';
+import { applyDevEasterEgg } from './services/devEasterEgg';
 import confetti from 'canvas-confetti';
 
 type AppView =
+  | 'challenge'
   | 'title'
   | 'world_select'
   | 'runner'
@@ -25,6 +29,11 @@ type AppView =
   | 'achievements'
   | 'certificate';
 
+const STORAGE_KEY = 'tabuada_magica_progress';
+
+// Views with a running game: ESC must not silently discard progress there.
+const GAME_VIEWS: AppView[] = ['runner', 'balloons', 'cauldron', 'challenge'];
+
 export default function App() {
   const [currentView, setCurrentView] = useState<AppView>('title');
   const [selectedWorld, setSelectedWorld] = useState<WorldConfig>(WORLDS[0]);
@@ -32,9 +41,9 @@ export default function App() {
   // Load progress from localStorage or default
   const [progress, setProgress] = useState<PlayerProgress>(() => {
     try {
-      const saved = localStorage.getItem('tabuada_magica_progress');
+      const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        return sanitizeProgress(JSON.parse(saved));
       }
     } catch {
       // ignore
@@ -45,7 +54,7 @@ export default function App() {
   // Save progress changes to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('tabuada_magica_progress', JSON.stringify(progress));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
     } catch {
       // ignore
     }
@@ -54,7 +63,7 @@ export default function App() {
   // Global ESC key to return to title
   useEffect(() => {
     const handleGlobalKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && currentView !== 'title') {
+      if (e.key === 'Escape' && currentView !== 'title' && !GAME_VIEWS.includes(currentView)) {
         soundManager.playBloop(350);
         setCurrentView('title');
       }
@@ -65,6 +74,7 @@ export default function App() {
 
   // Award stars and gems from Runner
   const handleFinishRunner = (starsEarned: number, gemsEarned: number, score: number) => {
+    const completedWorldId = selectedWorld.id;
     setProgress((prev) => {
       const newStars = prev.stars + starsEarned;
       const newGems = prev.gems + gemsEarned;
@@ -79,7 +89,7 @@ export default function App() {
       }
 
       return {
-        ...prev,
+        ...recordWorldCompletion(prev, completedWorldId, starsEarned),
         stars: newStars,
         gems: newGems,
         highScoreRunner: newHighScore,
@@ -90,8 +100,10 @@ export default function App() {
     setCurrentView('world_select');
   };
 
+  // Accept both legacy (score, gems) and shared (stars, gems, score) callbacks.
   // Award from Balloon Pop
-  const handleFinishBalloons = (score: number, gemsEarned: number) => {
+  const handleFinishBalloons = (starsEarned: number, gemsEarned: number, finalScore?: number) => {
+    const score = finalScore ?? starsEarned;
     setProgress((prev) => {
       const newGems = prev.gems + gemsEarned;
       const newHigh = Math.max(prev.highScoreBalloons, score);
@@ -113,7 +125,8 @@ export default function App() {
   };
 
   // Award from Potion Cauldron
-  const handleFinishCauldron = (score: number, gemsEarned: number) => {
+  const handleFinishCauldron = (starsEarned: number, gemsEarned: number, finalScore?: number) => {
+    const score = finalScore ?? starsEarned;
     setProgress((prev) => {
       const newGems = prev.gems + gemsEarned;
       const newHigh = Math.max(prev.highScoreCauldron, score);
@@ -134,9 +147,16 @@ export default function App() {
     setCurrentView('title');
   };
 
+  const handleBuyChallenge = () => setProgress((prev) => purchaseChallenge(prev));
+  const handleFinishChallenge = (result: ChallengeResult) => {
+    setProgress((prev) => recordChallengeResult(prev, result));
+  };
+
   // Update Student Name
   const handleUpdateName = (newName: string) => {
-    setProgress((prev) => ({ ...prev, playerName: newName }));
+    setProgress((prev) =>
+      applyDevEasterEgg({ ...prev, playerName: sanitizeName(newName) })
+    );
   };
 
   // Wardrobe unlocks
@@ -149,21 +169,15 @@ export default function App() {
   };
 
   const handleUnlockMascot = (mascotId: string, cost: number) => {
-    setProgress((prev) => ({
-      ...prev,
-      gems: prev.gems - cost,
-      unlockedMascots: [...prev.unlockedMascots, mascotId],
-      selectedMascot: mascotId,
-    }));
+    setProgress((prev) => {
+      return unlockMascot(prev, mascotId, cost);
+    });
   };
 
   const handleUnlockAccessory = (hatId: string, cost: number) => {
-    setProgress((prev) => ({
-      ...prev,
-      gems: prev.gems - cost,
-      unlockedAccessories: [...prev.unlockedAccessories, hatId],
-      selectedHat: hatId,
-    }));
+    setProgress((prev) => {
+      return unlockAccessory(prev, hatId, cost);
+    });
   };
 
   const handleLabAchievement = () => {
@@ -218,12 +232,19 @@ export default function App() {
         {currentView === 'world_select' && (
           <WorldSelect
             progress={progress}
+            onBuyChallenge={handleBuyChallenge}
+            onEnterChallenge={() => { if (progress.challenge.unlocked) setCurrentView('challenge'); }}
             onSelectWorld={(world) => {
               setSelectedWorld(world);
               setCurrentView('runner');
             }}
             onBack={() => setCurrentView('title')}
           />
+        )}
+
+        {currentView === 'challenge' && progress.challenge.unlocked && (
+          <ChallengeRealm playerName={progress.playerName} mascotId={progress.selectedMascot} hatId={progress.selectedHat}
+            onFinish={handleFinishChallenge} onBack={() => setCurrentView('world_select')} />
         )}
 
         {currentView === 'runner' && (
@@ -265,6 +286,7 @@ export default function App() {
             gems={progress.gems}
             unlockedMascots={progress.unlockedMascots}
             unlockedAccessories={progress.unlockedAccessories}
+            completedLevels={progress.completedLevels}
             onUpdateName={handleUpdateName}
             onSelectMascot={handleSelectMascot}
             onSelectHat={handleSelectHat}
@@ -288,6 +310,7 @@ export default function App() {
             selectedMascot={progress.selectedMascot}
             selectedHat={progress.selectedHat}
             totalStars={progress.stars}
+            challengeTitle={bestChallengeTitle(progress)}
             onBack={() => setCurrentView('achievements')}
           />
         )}

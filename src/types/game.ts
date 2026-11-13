@@ -40,19 +40,23 @@ export interface Question {
 }
 
 export interface MascotSkin {
+  requiresAllWorlds?: boolean;
   id: string;
   name: string;
   emoji: string;
+  image?: string;
   color: string;
   unlocked: boolean;
   cost: number;
 }
 
 export interface MascotAccessory {
+  requiresAllWorlds?: boolean;
   id: string;
   name: string;
   type: 'hat' | 'cape' | 'glasses';
   emoji: string;
+  image?: string;
   cost: number;
   unlocked: boolean;
 }
@@ -68,6 +72,7 @@ export interface Achievement {
 }
 
 export interface PlayerProgress {
+  challenge: ChallengeProgress;
   playerName: string;
   stars: number;
   gems: number;
@@ -78,6 +83,10 @@ export interface PlayerProgress {
   selectedHat: string;
   unlockedMascots: string[];
   unlockedAccessories: string[];
-  completedLevels: Record<string, number>; // worldId_levelIndex -> stars (1-3)
+  completedLevels: Record<string, number>; // worldId -> best victory stars (1-3); legacy level keys may remain
   unlockedAchievements: string[];
 }
+
+export type ChallengeMedal = 'none' | 'bronze' | 'silver' | 'gold';
+export interface ChallengeProgress { unlocked: boolean; attempts: number; bestScore: number; bestStreak: number; bestMedal: ChallengeMedal; }
+export interface ChallengeResult { correct: number; wrong: number; timeouts: number; score: number; bestStreak: number; completed: boolean; medal: ChallengeMedal; durationSec: number; }

@@ -1,8 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { ArrowLeft, Volume2, Sparkles, Wand2, CheckCircle2, RotateCcw } from 'lucide-react';
 import { generateQuestion } from '../services/mathEngine';
+import { gemsForFreePlayCorrectAnswer, finalizeFreePlayGems } from '../services/rewards';
+import { buildFreePlayGemSummary } from '../services/gemSummary';
 import { soundManager } from '../services/sound';
 import confetti from 'canvas-confetti';
+
+// Reference per-question time limit so answer speed scales gem rewards on alchemy word problems.
+const CAULDRON_QUESTION_TIME_LIMIT_SEC = 8;
 
 interface PotionCauldronGameProps {
   onBack: () => void;
@@ -25,9 +30,15 @@ export const PotionCauldronGame: React.FC<PotionCauldronGameProps> = ({ onBack, 
   const [bubbles, setBubbles] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [potionsCompleted, setPotionsCompleted] = useState<number>(0);
+  const [rawGems, setRawGems] = useState<number>(0);
+  const [wrongAnswers, setWrongAnswers] = useState<number>(0);
+  const [showSummary, setShowSummary] = useState<boolean>(false);
   const questionStartTimeRef = useRef<number>(performance.now());
+  const rawGemsRef = useRef<number>(0);
+  const wrongAnswersRef = useRef<number>(0);
 
   const handleSelectOption = (val: number) => {
+    if (bubbles || showSummary) return;
     if (val === question.result) {
       soundManager.playCorrect();
       setBubbles(true);
@@ -40,11 +51,20 @@ export const PotionCauldronGame: React.FC<PotionCauldronGameProps> = ({ onBack, 
       const elapsedSec = (performance.now() - questionStartTimeRef.current) / 1000;
       const speedBonus = elapsedSec < 3 ? 50 : elapsedSec < 6 ? 25 : 0;
       const points = 120 + speedBonus;
+      const answerGems = gemsForFreePlayCorrectAnswer({
+        factorA: question.factorA,
+        factorB: question.factorB,
+        elapsedSec,
+        timeLimitSec: CAULDRON_QUESTION_TIME_LIMIT_SEC,
+      });
+      const nextRawGems = rawGemsRef.current + answerGems;
+      rawGemsRef.current = nextRawGems;
+      setRawGems(nextRawGems);
 
       setScore((prev) => prev + points);
       setPotionsCompleted((prev) => prev + 1);
       setFeedback(
-        `✨ Poção Perfeita! ${question.factorA} × ${question.factorB} = ${question.result}! (+${points} pts${
+        `✨ Poção Perfeita! ${question.factorA} × ${question.factorB} = ${question.result}! (+${points} pts · +💎${
           speedBonus > 0 ? ` · ⚡ Rapidez +${speedBonus}` : ''
         })`
       );
@@ -53,21 +73,32 @@ export const PotionCauldronGame: React.FC<PotionCauldronGameProps> = ({ onBack, 
         setBubbles(false);
         setFeedback(null);
         setSelectedIngredient(INGREDIENTS[Math.floor(Math.random() * INGREDIENTS.length)]);
-        setQuestion(generateQuestion([2, 3, 4, 5, 6, 7, 8]));
+        setQuestion((prev) =>
+          generateQuestion([2, 3, 4, 5, 6, 7, 8], 10, {
+            factorA: prev.factorA,
+            factorB: prev.factorB,
+          })
+        );
         questionStartTimeRef.current = performance.now();
         setCurrentLevel((prev) => prev + 1);
       }, 1600);
     } else {
       soundManager.playWrong();
+      const nextWrong = wrongAnswersRef.current + 1;
+      wrongAnswersRef.current = nextWrong;
+      setWrongAnswers(nextWrong);
       setFeedback(`Ops, quase! Tente somar ${question.factorA} vezes o número ${question.factorB}.`);
     }
   };
 
+  const projectedGems = finalizeFreePlayGems(rawGems, wrongAnswers);
+  const gemSummary = buildFreePlayGemSummary(rawGems, wrongAnswers);
+
   return (
     <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 bg-gradient-to-b from-indigo-900 via-purple-900 to-slate-900 rounded-3xl shadow-2xl border-4 border-purple-400 text-white relative overflow-hidden">
       {/* Decorative stars in background */}
-      <div className="absolute top-4 left-6 text-2xl animate-pulse">✨</div>
-      <div className="absolute top-10 right-10 text-xl animate-pulse" style={{ animationDelay: '1s' }}>⭐</div>
+      <div className="absolute top-28 left-6 text-2xl animate-pulse pointer-events-none" aria-hidden="true">✨</div>
+      <div className="absolute top-32 right-10 text-xl animate-pulse pointer-events-none" style={{ animationDelay: '1s' }} aria-hidden="true">⭐</div>
       <div className="absolute bottom-12 left-10 text-3xl animate-pulse" style={{ animationDelay: '1.5s' }}>🔮</div>
 
       {/* Header */}
@@ -87,8 +118,17 @@ export const PotionCauldronGame: React.FC<PotionCauldronGameProps> = ({ onBack, 
           <span className="text-xs font-bold text-purple-300">Poção #{currentLevel}</span>
         </div>
 
-        <div className="flex items-center gap-2 bg-purple-800/80 px-3 py-1 rounded-xl border border-purple-500 font-black text-sm">
-          <span>⭐ {score} pts</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-purple-800/80 px-3 py-1 rounded-xl border border-purple-500 font-black text-sm">
+            <span>⭐ {score} pts</span>
+          </div>
+          <div
+            className="flex items-center gap-1 bg-emerald-900/80 text-emerald-200 px-3 py-1 rounded-xl border border-emerald-400 font-black text-sm tabular-nums"
+            data-testid="hud-gems"
+            aria-label={`Gemas estimadas na rodada: ${projectedGems}`}
+          >
+            <span>💎 {projectedGems}</span>
+          </div>
         </div>
       </div>
 
@@ -189,12 +229,71 @@ export const PotionCauldronGame: React.FC<PotionCauldronGameProps> = ({ onBack, 
       <div className="mt-6 pt-4 border-t border-purple-800 flex justify-between items-center text-xs font-bold text-purple-300">
         <span>Poções preparadas com sucesso: {potionsCompleted}</span>
         <button
-          onClick={() => onFinish(score, Math.floor(score / 40))}
+          onClick={() => setShowSummary(true)}
           className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold"
         >
           Guardar Poções & Concluir
         </button>
       </div>
+
+      {/* End-of-round Gem Summary Modal */}
+      {showSummary && (
+        <div className="absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white text-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl border-4 border-purple-400">
+            <div className="text-6xl mb-2">🧪</div>
+            <h3 className="text-3xl font-black font-fun text-purple-950 mb-1">Poções Guardadas!</h3>
+            <p className="text-slate-600 font-bold mb-4">
+              Veja o resultado da sua sessão de alquimia:
+            </p>
+
+            <div className="bg-purple-50 p-4 rounded-2xl border border-purple-200 mb-6">
+              <div className="flex justify-around gap-2">
+                <div>
+                  <span className="text-xs font-bold text-slate-500 uppercase block">Pontuação</span>
+                  <span className="text-2xl font-black text-amber-600">{score} pts</span>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-500 uppercase block">Poções</span>
+                  <span className="text-2xl font-black text-purple-700">{potionsCompleted} 🧪</span>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-500 uppercase block">Gemas Ganhas</span>
+                  <span className="text-2xl font-black text-emerald-600">+{gemSummary.finalGems} 💎</span>
+                </div>
+              </div>
+              {gemSummary.penaltyNote && (
+                <p className="text-xs font-bold text-rose-600 mt-3">{gemSummary.penaltyNote}</p>
+              )}
+              {gemSummary.capNote && (
+                <p className="text-xs font-bold text-emerald-700 mt-1">{gemSummary.capNote}</p>
+              )}
+              <p className="text-xs font-semibold text-slate-500 mt-2">{gemSummary.tipText}</p>
+              <p className="text-xs font-bold text-purple-800 mt-2">
+                Toque em &quot;Salvar &amp; Voltar&quot; para guardar suas gemas! Sair sem salvar descarta as gemas desta rodada.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  questionStartTimeRef.current = performance.now();
+                  setShowSummary(false);
+                }}
+                className="flex-1 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black rounded-2xl flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Continuar</span>
+              </button>
+              <button
+                onClick={() => onFinish(score, gemSummary.finalGems)}
+                className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-2xl shadow"
+              >
+                Salvar & Voltar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
