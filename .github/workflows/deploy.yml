@@ -23,9 +23,11 @@ jobs:
         with:
           bun-version: '1.4.4'
       - run: bun install --frozen-lockfile
+      - run: bun run gen:challenge --check
       - run: bun run lint
       - run: bun run test
       - run: bun run build
+      - run: bun run check:bundle
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: dist

@@ -1,5 +1,5 @@
 import { CHALLENGE_PRICE, CHALLENGE_TOTAL_QUESTIONS, CHALLENGE_LIVES } from './challengeConfig';
-import { computeChallengeMedal } from './challengeEngine';
+import { computeChallengeMedal } from './challengeMedal';
 import { containsProfanity } from './profanity';
 import { WORLDS } from './mathEngine';
 import type { MascotSkin, PlayerProgress, ChallengeMedal, ChallengeResult } from '../types/game';

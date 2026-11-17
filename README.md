@@ -13,7 +13,7 @@ Jogo educativo em português (pt-BR) para praticar a tabuada no 3º ano do Ensin
 - **Festa dos Balões:** estourar os balões com a resposta certa.
 - **Caldeirão Mágico:** preparar poções somando frascos iguais (multiplicação como soma repetida).
 - **Laboratório Visual:** matrizes de figurinhas para ver a multiplicação como linhas e colunas.
-- **Torre dos Mestres 🗼:** reino-desafio, bem mais difícil, que só abre depois de concluir os 5 reinos e pagar 2000 gemas (uma vez). São 24 desafios em 3 fases, com resposta **digitada**, tabuadas estendidas, expressões com precedência e problemas de vários passos. A recompensa é uma medalha (bronze, prata ou ouro) e um título no certificado. A Torre não dá estrelas nem gemas e não interfere nos demais reinos.
+- **Torre dos Mestres 🗼:** desafio que só abre depois de concluir os 5 reinos e pagar 5.000 gemas (uma vez). São 24 multiplicações diretas em 3 fases, com fatores de 2 a 50, resposta **digitada** e 1, 2 e 3 minutos por questão nas fases 1, 2 e 3, respectivamente. A recompensa é uma medalha (bronze, prata ou ouro) e um título no certificado. A Torre não dá estrelas nem gemas e não interfere nos demais reinos.
 
 ### Progressão e recompensas
 - **Estrelas** liberam os reinos em ordem. **Gemas** compram mascotes e acessórios.
@@ -43,9 +43,12 @@ Abra `http://localhost:3000/GamesEduReinoTabuada/` (o servidor de desenvolviment
 | Comando | O que faz |
 |---|---|
 | `bun run dev` | Servidor de desenvolvimento com recarga automática |
+| `bun run gen:challenge` | Regenera o catálogo versionado de rotas do desafio |
+| `bun run gen:challenge --check` | Confere se o catálogo corresponde ao gerador |
 | `bun run lint` | Verificação de tipos (TypeScript) |
 | `bun run test` | Testes com Vitest |
 | `bun run build` | Build de produção em `dist/` |
+| `bun run check:bundle` | Mede o JavaScript inicial/total e aplica limites gzip de 105/150 KiB |
 | `bun run preview` | Serve o build de produção localmente |
 
 ### Atalhos de teste (só no servidor de desenvolvimento)
@@ -65,20 +68,23 @@ src/
   services/
     mathEngine.ts         reinos e geração das perguntas da corrida
     rewards.ts            cálculo de gemas (dificuldade, velocidade, penalidade de 10%)
-    challengeEngine.ts    gerador e pontuação da Torre dos Mestres
-    challengeConfig.ts    constantes ajustáveis da Torre (tempos, vidas, preço)
+    challengeEngine.ts    seleção de rota, explicações e pontuação da Torre
+    challengeConfig.ts    fases, tempo, vidas e preço da Torre
     progress.ts           validação do save, compras e trava por reinos concluídos
     profanity.ts          filtro de palavrões (PT, EN, DE, IT)
     gameData.ts           mascotes, acessórios, preços e progresso padrão
     sound.ts              sons, música e leitura em voz alta
   assets/                 ilustrações em SVG (mascotes e acessórios)
+scripts/
+  generate-challenge-routes.ts  geração reproduzível do catálogo da Torre
+  check-bundle.ts               medição e limites do JavaScript de produção
 ```
 
-A dificuldade da Torre dos Mestres pode ser ajustada em `src/services/challengeConfig.ts`. Os preços e o ritmo de ganho de gemas estão em `src/services/gameData.ts` e `src/services/rewards.ts`; a calibração é documentada nos testes de `rewards.test.ts`.
+As rotas progressivas da Torre são geradas por `scripts/generate-challenge-routes.ts` e verificadas no CI. O tempo e o preço estão em `src/services/challengeConfig.ts`. Os preços e o ritmo de ganho de gemas dos demais modos estão em `src/services/gameData.ts` e `src/services/rewards.ts`; a calibração é documentada nos testes de `rewards.test.ts`.
 
 ## Publicação no GitHub Pages
 
-O deploy usa GitHub Actions: a cada push na `main`, o workflow instala as dependências com Bun, executa lint, testes e build, e publica `dist/` no Pages. Acompanhe na aba **Actions**. Também é possível iniciar manualmente pelo botão **Run workflow**.
+O deploy usa GitHub Actions: a cada push na `main`, o workflow instala as dependências com Bun, executa lint, testes, build e a checagem de tamanho do JavaScript, e publica `dist/` no Pages. Acompanhe na aba **Actions**. Também é possível iniciar manualmente pelo botão **Run workflow**.
 
 Na primeira vez, em **Settings → Pages → Build and deployment → Source**, selecione **GitHub Actions**.
 

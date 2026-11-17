@@ -20,9 +20,12 @@ import {
   CHALLENGE_NAME,
   CHALLENGE_PHASES,
   CHALLENGE_QUESTIONS_PER_PHASE,
+  CHALLENGE_TIME_LIMIT_SEC,
 } from '../services/challengeConfig';
 import {
   ChallengeQuestion,
+  formatChallengeTime,
+  formatChallengeTimeText,
   generateChallengeSession,
   isChallengeAnswerCorrect,
   scoreChallengeAnswer,
@@ -81,7 +84,8 @@ export const ChallengeRealm: React.FC<ChallengeRealmProps> = ({
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [input, setInput] = useState('');
-  const [timeLeft, setTimeLeft] = useState<number>(questions[0]?.timeLimitSec ?? 12);
+  const [isPrependMode, setIsPrependMode] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number>(questions[0]?.timeLimitSec ?? CHALLENGE_TIME_LIMIT_SEC);
 
   const [feedbackModal, setFeedbackModal] = useState<FeedbackModalState | null>(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
@@ -296,15 +300,31 @@ export const ChallengeRealm: React.FC<ChallengeRealmProps> = ({
     (digit: string) => {
       if (result || feedbackModal || showExitConfirm || isTransitioning) return;
       soundManager.playBloop(460);
-      setInput((prev) => (prev.length < MAX_INPUT_DIGITS ? prev + digit : prev));
+      setInput((prev) => (
+        prev.length < MAX_INPUT_DIGITS
+          ? isPrependMode ? digit + prev : prev + digit
+          : prev
+      ));
     },
-    [result, feedbackModal, showExitConfirm, isTransitioning]
+    [result, feedbackModal, showExitConfirm, isTransitioning, isPrependMode]
   );
 
   const handleBackspace = useCallback(() => {
     if (result || feedbackModal || showExitConfirm || isTransitioning) return;
     soundManager.playBloop(340);
-    setInput((prev) => prev.slice(0, -1));
+    setInput((prev) => isPrependMode ? prev.slice(1) : prev.slice(0, -1));
+  }, [result, feedbackModal, showExitConfirm, isTransitioning, isPrependMode]);
+
+  const handleClearInput = useCallback(() => {
+    if (result || feedbackModal || showExitConfirm || isTransitioning) return;
+    soundManager.playBloop(300);
+    setInput('');
+  }, [result, feedbackModal, showExitConfirm, isTransitioning]);
+
+  const handleTogglePrependMode = useCallback(() => {
+    if (result || feedbackModal || showExitConfirm || isTransitioning) return;
+    soundManager.playBloop(380);
+    setIsPrependMode((active) => !active);
   }, [result, feedbackModal, showExitConfirm, isTransitioning]);
 
   const handleSubmit = useCallback(() => {
@@ -425,7 +445,7 @@ export const ChallengeRealm: React.FC<ChallengeRealmProps> = ({
     setMascotReaction('idle');
     setInput('');
 
-    if (modal.nextLives <= 0 || currentIndex + 1 >= questions.length) {
+    if (modal.type === 'timeout' || modal.nextLives <= 0 || currentIndex + 1 >= questions.length) {
       finalizeSession({
         correct: modal.snapshotCorrect,
         wrong: modal.snapshotWrong,
@@ -440,6 +460,19 @@ export const ChallengeRealm: React.FC<ChallengeRealmProps> = ({
       questionResolvedRef.current = false;
     }
   }, [feedbackModal, currentIndex, questions, finalizeSession]);
+
+  const handleAbandon = useCallback(() => {
+    soundManager.playBloop(300);
+    clearTransitionTimer();
+    finalizeSession({
+      correct: correctCount,
+      wrong: wrongCount,
+      timeouts: timeoutsCount,
+      score,
+      bestStreak,
+    });
+    onBack();
+  }, [clearTransitionTimer, finalizeSession, correctCount, wrongCount, timeoutsCount, score, bestStreak, onBack]);
 
   const handleRetry = useCallback(() => {
     soundManager.playBloop(500);
@@ -545,7 +578,7 @@ export const ChallengeRealm: React.FC<ChallengeRealmProps> = ({
             </div>
             <div className="bg-purple-900/60 border border-purple-400/30 rounded-2xl p-3">
               <span className="text-xs font-bold text-purple-300 block">Duração</span>
-              <span className="text-xl font-black text-purple-100 tabular-nums">{result.durationSec}s</span>
+              <span className="text-xl font-black text-purple-100 tabular-nums">{formatChallengeTime(result.durationSec)}</span>
             </div>
           </div>
 
@@ -575,10 +608,10 @@ export const ChallengeRealm: React.FC<ChallengeRealmProps> = ({
     );
   }
 
-  const timeLimit = currentQuestion?.timeLimitSec ?? 12;
+  const timeLimit = currentQuestion?.timeLimitSec ?? CHALLENGE_TIME_LIMIT_SEC;
   const timePercent = Math.max(0, Math.min(100, (timeLeft / timeLimit) * 100));
-  const isTimeCritical = timePercent <= 25 || timeLeft <= 4;
-  const isTimeLow = !isTimeCritical && timePercent <= 50;
+  const isTimeCritical = timeLeft <= 30;
+  const isTimeLow = !isTimeCritical && timeLeft <= 60;
   const timerBarColor = isTimeCritical
     ? 'bg-rose-500 animate-pulse'
     : isTimeLow
@@ -680,7 +713,7 @@ export const ChallengeRealm: React.FC<ChallengeRealmProps> = ({
               isTimeCritical ? 'text-rose-400' : isTimeLow ? 'text-amber-300' : 'text-emerald-300'
             }`}
           >
-            {Math.ceil(timeLeft)}s
+            {formatChallengeTime(timeLeft)}
           </span>
         </div>
         <div
@@ -690,6 +723,7 @@ export const ChallengeRealm: React.FC<ChallengeRealmProps> = ({
           aria-valuenow={Math.ceil(timeLeft)}
           aria-valuemin={0}
           aria-valuemax={timeLimit}
+          aria-valuetext={formatChallengeTimeText(timeLeft)}
         >
           <div
             className={`h-full rounded-full transition-all duration-100 ${timerBarColor}`}
@@ -774,6 +808,9 @@ export const ChallengeRealm: React.FC<ChallengeRealmProps> = ({
         <ChallengeKeypad
           onDigit={handleDigit}
           onBackspace={handleBackspace}
+          onClear={handleClearInput}
+          isPrependMode={isPrependMode}
+          onTogglePrepend={handleTogglePrependMode}
           onSubmit={handleSubmit}
           disabled={Boolean(feedbackModal || showExitConfirm || isTransitioning)}
           canSubmit={input.trim().length > 0}
@@ -825,7 +862,9 @@ export const ChallengeRealm: React.FC<ChallengeRealmProps> = ({
             </div>
 
             <p className="mt-3 text-xs font-bold text-purple-200">
-              {feedbackModal.nextLives > 0
+              {feedbackModal.type === 'timeout'
+                ? 'O tempo esgotou e encerrou esta tentativa.'
+                : feedbackModal.nextLives > 0
                 ? `Vidas restantes: ${feedbackModal.nextLives} ❤️`
                 : 'Você perdeu sua última vida nesta tentativa.'}
             </p>
@@ -836,7 +875,7 @@ export const ChallengeRealm: React.FC<ChallengeRealmProps> = ({
               onClick={handleContinueFromModal}
               className="mt-5 w-full min-h-[48px] py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 font-black text-base shadow-lg active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
-              Continuar
+              {feedbackModal.type === 'timeout' || feedbackModal.nextLives <= 0 ? 'Ver resultado' : 'Continuar'}
             </button>
           </div>
         </div>
@@ -857,11 +896,11 @@ export const ChallengeRealm: React.FC<ChallengeRealmProps> = ({
             <div className="flex items-center gap-2 text-amber-300 mb-2">
               <AlertTriangle className="w-6 h-6 shrink-0" aria-hidden="true" />
               <h3 id="challenge-exit-title" className="text-xl font-black font-fun">
-                Sair e perder esta tentativa?
+                Sair e encerrar esta tentativa?
               </h3>
             </div>
             <p className="text-sm text-purple-200 font-semibold leading-relaxed">
-              Seu progresso atual na Torre dos Mestres será perdido.
+              Esta saída contará como uma tentativa, mas seu progresso atual na Torre dos Mestres será perdido.
             </p>
 
             <div className="mt-5 flex flex-col sm:flex-row gap-2.5">
@@ -878,11 +917,7 @@ export const ChallengeRealm: React.FC<ChallengeRealmProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  soundManager.playBloop(300);
-                  clearTransitionTimer();
-                  onBack();
-                }}
+                onClick={handleAbandon}
                 className="flex-1 min-h-[44px] py-2.5 px-4 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-sm shadow transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 Sair

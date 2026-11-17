@@ -1,0 +1,66 @@
+name: Close changelog after merge
+
+# Roda a cada push na main (ou seja, a cada merge de PR). Rodar em `push` evita o token somente
+# leitura que PRs de forks/Dependabot recebem em `pull_request`. Se [Unreleased] estiver vazio
+# (inclusive no merge do próprio PR de changelog), o job não faz nada.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: changelog-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: main
+      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
+        with:
+          bun-version: '1.4.4'
+      - name: Close [Unreleased] into a dated section
+        id: roll
+        run: |
+          code=0
+          bun run changelog:release --check || code=$?
+          if [ "$code" -eq 0 ]; then
+            bun run changelog:release
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif [ "$code" -eq 2 ]; then
+            echo "[Unreleased] vazio; nada a fazer."
+          else
+            echo "::error::changelog:release --check falhou (código $code)"
+            exit "$code"
+          fi
+      - name: Open or update the changelog PR
+        if: steps.roll.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          pr=$(gh api "repos/${REPO}/commits/${SHA}/pulls" --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -n "$pr" ]; then title="docs: close changelog after PR #${pr}"; else title="docs: close changelog"; fi
+          branch="changelog/release"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add CHANGELOG.md
+          git commit -m "$title"
+          # Branch única do bot, sempre regenerada a partir da main: substitui o PR anterior ainda aberto.
+          git push --force origin "$branch"
+          open=$(gh pr list --head "$branch" --base main --state open --json number --jq '.[0].number // empty')
+          if [ -z "$open" ]; then
+            gh pr create --base main --head "$branch" --title "$title" \
+              --body "Fecha \`[Unreleased]\` numa seção datada e abre uma nova seção vazia."
+          fi

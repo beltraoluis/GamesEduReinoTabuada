@@ -20,6 +20,7 @@ const MEDAL_ICONS: Record<ChallengeMedal, string> = {
   silver: '🥈',
   gold: '🥇',
 };
+const formatGems = (amount: number) => amount.toLocaleString('pt-BR');
 
 export const WorldSelect: React.FC<WorldSelectProps> = ({
   progress,
@@ -150,7 +151,7 @@ export const WorldSelect: React.FC<WorldSelectProps> = ({
                 {CHALLENGE_NAME}
               </h3>
               <p className="text-xs sm:text-sm text-purple-200 font-semibold mt-1 leading-relaxed max-w-xl">
-                24 desafios em 3 fases de cálculo avançado, expressões e enigmas — sem múltipla escolha!
+                24 multiplicações diretas em 3 fases, com fatores de 2 a 50 e 1, 2 e 3 minutos por questão nas fases 1, 2 e 3 — sem múltipla escolha!
               </p>
             </div>
           </div>
@@ -170,8 +171,8 @@ export const WorldSelect: React.FC<WorldSelectProps> = ({
             {!challengeUnlocked && challengeAvailable && (
               <div className="flex flex-col gap-2 w-full">
                 <div className="flex items-center justify-between text-xs font-bold text-purple-200 px-1">
-                  <span>Preço: <strong className="text-amber-300 tabular-nums">{CHALLENGE_PRICE} 💎</strong></span>
-                  <span>Suas gemas: <strong className="text-cyan-300 tabular-nums">{progress.gems} 💎</strong></span>
+                  <span>Preço: <strong className="text-amber-300 tabular-nums">{formatGems(CHALLENGE_PRICE)} 💎</strong></span>
+                  <span>Suas gemas: <strong className="text-cyan-300 tabular-nums">{formatGems(progress.gems)} 💎</strong></span>
                 </div>
                 {canBuy ? (
                   <button
@@ -183,7 +184,7 @@ export const WorldSelect: React.FC<WorldSelectProps> = ({
                     className="w-full min-h-[44px] px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm rounded-2xl shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
                   >
                     <Sparkles className="w-4 h-4 shrink-0" aria-hidden="true" />
-                    <span>Desbloquear por {CHALLENGE_PRICE} 💎</span>
+                    <span>Desbloquear por {formatGems(CHALLENGE_PRICE)} 💎</span>
                   </button>
                 ) : (
                   <button
@@ -193,7 +194,7 @@ export const WorldSelect: React.FC<WorldSelectProps> = ({
                     className="w-full min-h-[44px] px-4 py-3 bg-slate-700/80 text-slate-300 border border-slate-500/50 font-black text-sm rounded-2xl flex items-center justify-center gap-2 cursor-not-allowed"
                   >
                     <Lock className="w-4 h-4 shrink-0" aria-hidden="true" />
-                    <span className="tabular-nums">Faltam {missingGems} 💎</span>
+                    <span className="tabular-nums">Faltam {formatGems(missingGems)} 💎</span>
                   </button>
                 )}
               </div>
