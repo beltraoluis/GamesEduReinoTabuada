@@ -4,7 +4,7 @@ Todas as mudanças notáveis neste projeto são documentadas neste arquivo.
 
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
-## [Unreleased]
+## [2026-11-17]
 
 ### Added
 - Teclado do desafio com ações para limpar a resposta e alternar a digitação de dígitos da esquerda para a direita; o modo ativo tem indicação visual.
