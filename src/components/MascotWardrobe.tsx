@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Edit3 } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
 import { MASCOT_LIST, ACCESSORY_HATS, WORLDS } from '../services/mathEngine';
 import { meetsUnlockRequirement } from '../services/progress';
 import { MascotBadge } from './MascotBadge';
@@ -95,6 +94,44 @@ const WardrobeItemCard: React.FC<WardrobeItemCardProps> = ({
           totalWorlds={totalWorlds}
           onClick={onAction}
         />
+      </div>
+    </div>
+  );
+};
+
+// Retain the last message until its exit finishes; a new error cancels that exit.
+const NameErrorNotice: React.FC<{ error: string | null; shakeCount: number }> = ({ error, shakeCount }) => {
+  const [retainedError, setRetainedError] = useState(error);
+
+  useEffect(() => {
+    if (error) {
+      setRetainedError(error);
+      return;
+    }
+    // Fallback for environments that suppress CSS animation events.
+    const timeout = window.setTimeout(() => setRetainedError(null), 200);
+    return () => window.clearTimeout(timeout);
+  }, [error]);
+
+  const message = error ?? retainedError;
+  if (!message) return null;
+
+  return (
+    <div
+      id="name-profanity-error"
+      role="alert"
+      aria-hidden={!error || undefined}
+      className={`wardrobe-name-error ${error ? 'wardrobe-name-error-enter' : 'wardrobe-name-error-exit'}`}
+      onAnimationEnd={(event) => {
+        if (event.target === event.currentTarget && !error) setRetainedError(null);
+      }}
+    >
+      <div
+        key={shakeCount}
+        className="wardrobe-name-error-shake flex items-start gap-2 rounded-2xl border-2 border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm font-bold text-rose-800 shadow-sm"
+      >
+        <span aria-hidden="true" className="text-base leading-snug shrink-0">💛</span>
+        <span>{message}</span>
       </div>
     </div>
   );
@@ -292,28 +329,7 @@ export const MascotWardrobe: React.FC<MascotWardrobeProps> = ({
                   </button>
                 </div>
               </div>
-              <AnimatePresence mode="wait">
-                {nameError && (
-                  <motion.div
-                    id="name-profanity-error"
-                    role="alert"
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <motion.div
-                      key={shakeCount}
-                      animate={{ x: [0, -6, 6, -4, 4, 0] }}
-                      transition={{ duration: 0.35 }}
-                      className="flex items-start gap-2 rounded-2xl border-2 border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm font-bold text-rose-800 shadow-sm"
-                    >
-                      <span aria-hidden="true" className="text-base leading-snug shrink-0">💛</span>
-                      <span>{nameError}</span>
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <NameErrorNotice error={nameError} shakeCount={shakeCount} />
             </form>
           ) : (
             <div className="flex items-center gap-2 mt-1">

@@ -1,13 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ChallengeRealm } from './components/ChallengeRealm';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { TitleScreen } from './components/TitleScreen';
-import { GameRunner } from './components/GameRunner';
-import { BalloonPopGame } from './components/BalloonPopGame';
-import { PotionCauldronGame } from './components/PotionCauldronGame';
-import { VisualLab } from './components/VisualLab';
-import { MascotWardrobe } from './components/MascotWardrobe';
-import { AchievementsModal } from './components/AchievementsModal';
-import { CertificateModal } from './components/CertificateModal';
 import { WorldSelect } from './components/WorldSelect';
 import { AudioControls } from './components/AudioControls';
 import { ChallengeResult, PlayerProgress, WorldConfig } from './types/game';
@@ -15,7 +7,49 @@ import { DEFAULT_PROGRESS, WORLDS } from './services/mathEngine';
 import { soundManager } from './services/sound';
 import { sanitizeProgress, sanitizeName, recordWorldCompletion, unlockMascot, unlockAccessory, purchaseChallenge, recordChallengeResult, bestChallengeTitle } from './services/progress';
 import { applyDevEasterEgg } from './services/devEasterEgg';
-import confetti from 'canvas-confetti';
+
+// Screens behind a user action load on demand so the initial chunk only holds
+// the title, world select and global controls.
+const ChallengeRealm = lazy(() => import('./components/ChallengeRealm').then((m) => ({ default: m.ChallengeRealm })));
+const GameRunner = lazy(() => import('./components/GameRunner').then((m) => ({ default: m.GameRunner })));
+const BalloonPopGame = lazy(() => import('./components/BalloonPopGame').then((m) => ({ default: m.BalloonPopGame })));
+const PotionCauldronGame = lazy(() => import('./components/PotionCauldronGame').then((m) => ({ default: m.PotionCauldronGame })));
+const VisualLab = lazy(() => import('./components/VisualLab').then((m) => ({ default: m.VisualLab })));
+const MascotWardrobe = lazy(() => import('./components/MascotWardrobe').then((m) => ({ default: m.MascotWardrobe })));
+const AchievementsModal = lazy(() => import('./components/AchievementsModal').then((m) => ({ default: m.AchievementsModal })));
+const CertificateModal = lazy(() => import('./components/CertificateModal').then((m) => ({ default: m.CertificateModal })));
+
+// After a redeploy, an open tab may request chunk hashes that no longer exist.
+// Reload once to fetch the fresh index.html; a recent-reload timestamp in
+// sessionStorage prevents reload loops when the chunk is genuinely unavailable.
+const PRELOAD_RELOAD_KEY = 'tabuada_preload_reload_at';
+const PRELOAD_RELOAD_WINDOW_MS = 60_000;
+if (typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', (event) => {
+    try {
+      const last = Number(sessionStorage.getItem(PRELOAD_RELOAD_KEY));
+      if (Number.isFinite(last) && Date.now() - last < PRELOAD_RELOAD_WINDOW_MS) return;
+      sessionStorage.setItem(PRELOAD_RELOAD_KEY, String(Date.now()));
+    } catch {
+      return;
+    }
+    event.preventDefault();
+    window.location.reload();
+  });
+}
+
+function ViewLoading() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="w-full min-h-[60vh] flex flex-col items-center justify-center gap-3 text-amber-200"
+    >
+      <span className="text-4xl motion-safe:animate-bounce" aria-hidden="true">✨</span>
+      <span className="font-fun font-bold text-lg">Carregando magia...</span>
+    </div>
+  );
+}
 
 type AppView =
   | 'challenge'
@@ -204,7 +238,7 @@ export default function App() {
         </div>
 
         <AudioControls
-          showHome={currentView !== 'title'}
+          showHome={currentView !== 'title' && currentView !== 'challenge'}
           onHomeClick={() => {
             soundManager.playBloop(350);
             setCurrentView('title');
@@ -214,6 +248,7 @@ export default function App() {
 
       {/* Main Viewport Container */}
       <main className="w-full max-w-4xl flex-1 flex flex-col justify-center items-center">
+        <Suspense fallback={<ViewLoading />}>
         {currentView === 'title' && (
           <TitleScreen
             progress={progress}
@@ -314,6 +349,7 @@ export default function App() {
             onBack={() => setCurrentView('achievements')}
           />
         )}
+        </Suspense>
       </main>
     </div>
   );

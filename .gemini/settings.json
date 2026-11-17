@@ -1,0 +1,17 @@
+{
+  "context": { "fileName": ["AGENTS.md", "GEMINI.md"] },
+  "hooks": {
+    "AfterAgent": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "name": "changelog-check",
+            "type": "command",
+            "command": "bash \"$GEMINI_PROJECT_DIR/.agents/hooks/changelog-check.sh\" gemini"
+          }
+        ]
+      }
+    ]
+  }
+}

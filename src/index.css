@@ -56,3 +56,62 @@
   transform: translateY(4px);
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2), 0 4px 6px rgba(0, 0, 0, 0.15);
 }
+
+/* Name validation: preserve the former 200ms fade/slide and 350ms shake. */
+@keyframes wardrobe-name-error-enter {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes wardrobe-name-error-exit {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes wardrobe-name-error-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+.wardrobe-name-error-enter {
+  animation: wardrobe-name-error-enter 200ms ease-out both;
+}
+
+.wardrobe-name-error-exit {
+  animation: wardrobe-name-error-exit 200ms ease-out both;
+}
+
+.wardrobe-name-error-shake {
+  animation: wardrobe-name-error-shake 350ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wardrobe-name-error {
+    animation-duration: 1ms;
+  }
+
+  @keyframes wardrobe-name-error-reduced-enter {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes wardrobe-name-error-reduced-exit {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
+  .wardrobe-name-error-enter {
+    animation-name: wardrobe-name-error-reduced-enter;
+  }
+
+  .wardrobe-name-error-exit {
+    animation-name: wardrobe-name-error-reduced-exit;
+  }
+
+  .wardrobe-name-error-shake {
+    animation: none;
+  }
+}

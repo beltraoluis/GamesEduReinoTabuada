@@ -4,6 +4,9 @@ import { Delete, SendHorizontal } from 'lucide-react';
 interface ChallengeKeypadProps {
   onDigit: (digit: string) => void;
   onBackspace: () => void;
+  onClear: () => void;
+  isPrependMode: boolean;
+  onTogglePrepend: () => void;
   onSubmit: () => void;
   disabled?: boolean;
   canSubmit?: boolean;
@@ -18,6 +21,9 @@ const DIGIT_ROWS = [
 export const ChallengeKeypad: React.FC<ChallengeKeypadProps> = ({
   onDigit,
   onBackspace,
+  onClear,
+  isPrependMode,
+  onTogglePrepend,
   onSubmit,
   disabled = false,
   canSubmit = true,
@@ -73,6 +79,33 @@ export const ChallengeKeypad: React.FC<ChallengeKeypadProps> = ({
         <span>Enviar</span>
         <SendHorizontal className="w-5 h-5 shrink-0" aria-hidden="true" />
       </button>
+
+      <div className="col-span-3 grid grid-cols-2 gap-2 sm:gap-2.5">
+        <button
+          type="button"
+          disabled={disabled || !canSubmit}
+          onClick={onClear}
+          aria-label="Limpar resposta inteira"
+          className="min-h-[48px] rounded-2xl bg-slate-800/90 hover:bg-slate-700 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-slate-500/50 text-slate-100 font-black text-sm shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+        >
+          Limpar
+        </button>
+
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onTogglePrepend}
+          aria-label="Alternar digitação de caracteres à esquerda"
+          aria-pressed={isPrependMode}
+          className={`min-h-[48px] rounded-2xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed border-2 font-black text-sm shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
+            isPrependMode
+              ? 'bg-emerald-500 hover:bg-emerald-400 border-emerald-200 text-slate-950'
+              : 'bg-slate-800/90 hover:bg-slate-700 border-slate-500/50 text-slate-100'
+          }`}
+        >
+          Digitar à esquerda
+        </button>
+      </div>
     </div>
   );
 };

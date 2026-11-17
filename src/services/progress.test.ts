@@ -465,9 +465,9 @@ import { canBuyChallenge, purchaseChallenge, recordChallengeResult, bestChalleng
 import { summarizeChallenge } from './challengeEngine';
 
 describe('isolated challenge progress', () => {
-  const ready = () => ({ ...structuredClone(DEFAULT_PROGRESS), stars: 45, gems: 2500,
+  const ready = () => ({ ...structuredClone(DEFAULT_PROGRESS), stars: 45, gems: 5500,
     completedLevels: Object.fromEntries(WORLDS.map(w => [w.id, 3])) });
-  it('requires all five canonical realms and 2000 gems, spends once', () => {
+  it('requires all five canonical realms and 5000 gems, spends once', () => {
     const input = ready();
     expect(isChallengeAvailable(input)).toBe(true);
     expect(canBuyChallenge(input)).toBe(true);
@@ -478,7 +478,9 @@ describe('isolated challenge progress', () => {
     expect(bought.completedLevels).toBe(input.completedLevels);
     expect(bought.unlockedAchievements).toBe(input.unlockedAchievements);
     expect(purchaseChallenge(bought)).toBe(bought);
-    for (const locked of [{ ...input, gems: 1999 }, { ...input, completedLevels: {} },
+    const exactPurchase = purchaseChallenge({ ...input, gems: 5000 });
+    expect(exactPurchase.gems).toBe(0);
+    for (const locked of [{ ...input, gems: 4999 }, { ...input, completedLevels: {} },
       { ...input, completedLevels: { ...input.completedLevels, 'world-5': 0 } }]) {
       expect(purchaseChallenge(locked)).toBe(locked);
     }
@@ -497,6 +499,21 @@ describe('isolated challenge progress', () => {
     expect(replay.challenge.attempts).toBe(2);
     expect(bestChallengeTitle(replay)).toBe('Mestre da Torre');
     expect(bestChallengeTitle(input)).toBeNull();
+  });
+  it('records an abandoned partial run as an attempt without awarding a medal', () => {
+    const input = purchaseChallenge(ready());
+    const partial = summarizeChallenge({
+      correct: 3,
+      wrong: 0,
+      timeouts: 0,
+      score: 450,
+      bestStreak: 3,
+      durationSec: 25,
+    });
+    const result = recordChallengeResult(input, partial);
+    expect(partial.completed).toBe(false);
+    expect(result.challenge.attempts).toBe(1);
+    expect(result.challenge.bestMedal).toBe('none');
   });
   it('migrates missing fields and clamps hostile fields while retaining an actual saved boolean', () => {
     expect(sanitizeProgress({}).challenge).toEqual(DEFAULT_PROGRESS.challenge);
