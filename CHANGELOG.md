@@ -6,6 +6,8 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
 
 ## [Unreleased]
 
+## [2026-11-19]
+
 ### Added
 - Modo offline: um service worker gerado no build (`scripts/vite-plugins.ts`) guarda o jogo inteiro na primeira visita, com cache próprio por endereço de publicação e sem mascarar erros 404, e o manifesto com ícones permite instalar o jogo como aplicativo.
 - Rodapé com os links "Código-fonte desta versão" (commit publicado; em build local, o `origin` no HEAD com aviso se houver mudanças sem commit; ou `VITE_SOURCE_URL`) e "Licenças", e build publicando `LICENSE.txt` e `THIRD-PARTY-NOTICES.txt` com as licenças das dependências incluídas no build (inclusive o reset de CSS do Tailwind).
