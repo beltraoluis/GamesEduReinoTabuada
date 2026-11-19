@@ -1,6 +1,7 @@
 import { gzipSync } from 'node:zlib';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join, relative, resolve, sep } from 'node:path';
+import { FONT_PATTERN } from './vite-plugins.ts';
 
 const outputDirectory = resolve(process.argv[2] ?? 'dist');
 const assetsDirectory = resolve(outputDirectory, 'assets');
@@ -91,7 +92,8 @@ console.log(`  minified: ${formatBytes(total.rawBytes)}`);
 console.log(`  gzip:     ${formatBytes(total.gzipBytes)}`);
 const cssFiles = findFiles(assetsDirectory, (name) => name.endsWith('.css'));
 const css = measure(cssFiles);
-const latinFontFiles = findFiles(assetsDirectory, (name) => /-latin-(?!ext).*\.woff2$/.test(name));
+// Same selection the offline service worker precaches.
+const latinFontFiles = findFiles(assetsDirectory, (name) => FONT_PATTERN.test(name));
 const latinFontBytes = latinFontFiles.reduce((sum, file) => sum + statSync(file).size, 0);
 console.log(`CSS (${cssFiles.length} files):`);
 console.log(`  gzip:     ${formatBytes(css.gzipBytes)}`);

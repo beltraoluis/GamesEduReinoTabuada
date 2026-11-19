@@ -144,6 +144,7 @@ export const ChallengeRealm: React.FC<ChallengeRealmProps> = ({
       if (summary.completed) {
         soundManager.playVictory();
         confetti({
+          disableForReducedMotion: true,
           particleCount: 120,
           spread: 80,
           origin: { y: 0.55 },
@@ -369,6 +370,7 @@ export const ChallengeRealm: React.FC<ChallengeRealmProps> = ({
 
       if (isPhaseEnd && !isFinalQuestion) {
         confetti({
+          disableForReducedMotion: true,
           particleCount: 70,
           spread: 65,
           origin: { y: 0.6 },

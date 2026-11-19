@@ -14,11 +14,13 @@ O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.
 - Licença do projeto alterada de MIT para GNU AGPL v3 (`AGPL-3.0-only`) em `LICENSE`, `package.json` e `README.md`.
 - Fonte Nunito trocada pela versão variável (`@fontsource-variable/nunito`): um único arquivo de 39 kB substitui os quatro pesos (66 kB) baixados ao abrir o jogo.
 - Os balões e portais passaram a se mover sem renderizar a tela inteira a cada quadro, e o contador da corrida só é atualizado quando o segundo exibido muda.
-- Balões, corrida e caldeirão respeitam a preferência por movimento reduzido nos efeitos decorativos e confetes, e cancelam os temporizadores ao sair.
+- Com a preferência por movimento reduzido, as animações decorativas param em todas as telas e nenhum confete é disparado; balões, corrida e caldeirão também cancelam os temporizadores ao sair.
 - A música pausa quando a aba fica oculta e volta quando ela é reaberta, se estiver ligada.
 - A checagem de tamanho do build (`check:bundle`) também mede o CSS e as fontes latinas.
+- O workflow de deploy também roda em pull requests (lint, testes, build e `check:bundle`), sem publicar.
 
 ### Fixed
+- O rodapé de licença não aparece no certificado impresso.
 - Enter e Espaço na tela inicial só iniciam a aventura quando nenhum botão ou link está em foco, para não atropelar a ativação pelo teclado.
 
 ## [2026-11-17]

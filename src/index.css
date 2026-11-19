@@ -89,6 +89,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Decorative loops (float, pulse, bounce, wiggle, ping, spin) stop for everyone
+     who asked the system for less motion, on every screen. */
+  [class*='animate-']:not(.wardrobe-name-error) {
+    animation: none !important;
+  }
+
   .wardrobe-name-error {
     animation-duration: 1ms;
   }

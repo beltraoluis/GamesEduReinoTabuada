@@ -49,8 +49,10 @@ function git(...args: string[]): string | undefined {
 /** git@host:owner/repo.git or https://host/owner/repo.git → https://host/owner/repo */
 export function toWebUrl(remote: string | undefined): string | undefined {
   if (!remote) return undefined;
-  const ssh = remote.match(/^(?:ssh:\/\/)?git@([^:/]+)[:/](.+?)(?:\.git)?\/?$/);
-  if (ssh) return `https://${ssh[1]}/${ssh[2]}`;
+  const sshUrl = remote.match(/^ssh:\/\/(?:[^@/]+@)?([^:/]+)(?::\d+)?\/(.+?)(?:\.git)?\/?$/);
+  if (sshUrl) return `https://${sshUrl[1]}/${sshUrl[2]}`;
+  const scp = remote.match(/^(?:[^@/]+@)?([^:/]+):(?!\/)(.+?)(?:\.git)?\/?$/);
+  if (scp) return `https://${scp[1]}/${scp[2]}`;
   const https = remote.match(/^https:\/\/(?:[^@/]+@)?([^/]+)\/(.+?)(?:\.git)?\/?$/);
   return https ? `https://${https[1]}/${https[2]}` : undefined;
 }
@@ -76,8 +78,9 @@ function readLicenseText(dir: string): string | undefined {
 }
 
 // Build-time packages whose code is copied into the output (Tailwind's
-// Preflight reset ships inside the generated CSS).
-const BUNDLED_DEV_PACKAGES = ['tailwindcss'];
+// Preflight reset ships inside the generated CSS; Vite injects its
+// modulepreload polyfill and preload helper into the entry chunk).
+const BUNDLED_DEV_PACKAGES = ['tailwindcss', 'vite'];
 
 /** Runtime dependencies (transitively) that end up in the published bundle. */
 export function collectRuntimePackages(root: string): PackageJson[] {
@@ -137,9 +140,9 @@ export function licenseFilesPlugin(): Plugin {
 
 const PRECACHE_PATTERN = /\.(html|js|css|png|svg|webmanifest|txt)$/;
 // Only the Latin subsets are needed for Portuguese; other subsets stay on-demand.
-const FONT_PATTERN = /-latin-(?!ext)[^/]*\.woff2$/;
+export const FONT_PATTERN = /-latin-(?!ext)[^/]*\.woff2$/;
 
-function listFiles(directory: string): string[] {
+export function listFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
     return entry.isDirectory() ? listFiles(path) : [path];
@@ -186,8 +189,21 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Look in this version's cache first, then in other versions of this app.
+// After a deploy, an open tab can load the new index.html while the old worker
+// is still in control; the new chunks are then in the waiting worker's cache.
 function fromCache(url) {
-  return caches.open(CACHE).then((cache) => cache.match(url, MATCH_OPTIONS));
+  return caches.open(CACHE).then((cache) => cache.match(url, MATCH_OPTIONS)).then((hit) => {
+    if (hit) return hit;
+    return caches.keys().then((keys) =>
+      keys
+        .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE)
+        .reduce(
+          (found, key) => found.then((response) => response || caches.open(key).then((cache) => cache.match(url, MATCH_OPTIONS))),
+          Promise.resolve(undefined),
+        ),
+    );
+  });
 }
 
 function networkWithTimeout(request) {

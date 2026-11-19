@@ -353,7 +353,7 @@ export default function App() {
       </main>
 
       {/* AGPL-3.0 §13: offer the Corresponding Source to everyone using the game. */}
-      <footer className="w-full max-w-4xl flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-3 pb-1 text-xs font-semibold text-slate-400">
+      <footer className="print:hidden w-full max-w-4xl flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-3 pb-1 text-xs font-semibold text-slate-400">
         <span>Software livre sob a licença AGPL-3.0</span>
         <span aria-hidden="true">·</span>
         <a className="underline underline-offset-2 hover:text-amber-300 focus-visible:text-amber-300" href={__SOURCE_URL__} target="_blank" rel="noopener noreferrer">

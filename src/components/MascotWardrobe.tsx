@@ -215,7 +215,7 @@ export const MascotWardrobe: React.FC<MascotWardrobeProps> = ({
   ) => {
     if (gems >= cost) {
       soundManager.playCorrect();
-      confetti({ particleCount: 40, spread: 60 });
+      confetti({ particleCount: 40, spread: 60, disableForReducedMotion: true });
       onUnlock(id, cost);
     } else {
       soundManager.playWrong();

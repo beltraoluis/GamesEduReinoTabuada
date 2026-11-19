@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { collectRuntimePackages, renderServiceWorker, resolveSourceUrl, selectPrecacheFiles, toWebUrl } from './vite-plugins';
 
@@ -24,10 +25,11 @@ describe('resolveSourceUrl', () => {
     expect(toWebUrl('git@github.com:someone/fork.git')).toBe('https://github.com/someone/fork');
     expect(toWebUrl('https://github.com/beltraoluis/GamesEduReinoTabuada.git')).toBe('https://github.com/beltraoluis/GamesEduReinoTabuada');
     expect(toWebUrl('https://token@gitlab.com/group/app')).toBe('https://gitlab.com/group/app');
+    expect(toWebUrl('ssh://git@github.com:22/owner/repo.git')).toBe('https://github.com/owner/repo');
     expect(toWebUrl('/local/path')).toBeUndefined();
   });
 
-  it('names the local commit when building from a git checkout', () => {
+  it.skipIf(!existsSync('.git'))('names the local commit when building from a git checkout', () => {
     const saved = { ...process.env };
     for (const key of ['VITE_SOURCE_URL', 'GITHUB_SERVER_URL', 'GITHUB_REPOSITORY', 'GITHUB_SHA']) delete process.env[key];
     try {
@@ -78,7 +80,7 @@ describe('renderServiceWorker', () => {
 describe('collectRuntimePackages', () => {
   it('includes transitive runtime dependencies such as scheduler', () => {
     const names = collectRuntimePackages(process.cwd()).map((pkg) => pkg.name);
-    expect(names).toEqual(expect.arrayContaining(['react', 'react-dom', 'scheduler', 'canvas-confetti', 'tailwindcss']));
-    expect(names).not.toContain('vite');
+    expect(names).toEqual(expect.arrayContaining(['react', 'react-dom', 'scheduler', 'canvas-confetti', 'tailwindcss', 'vite']));
+    expect(names).not.toContain('vitest');
   });
 });

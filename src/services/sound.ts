@@ -260,7 +260,7 @@ class SoundManager {
 
   // Procedural soft background ambient tune
   public startMusic() {
-    if (this.isMusicMuted) return;
+    if (this.isMusicMuted || typeof document === 'undefined') return;
     document.addEventListener('visibilitychange', this.syncMusicVisibility);
     this.syncMusicVisibility();
   }

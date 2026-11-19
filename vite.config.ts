@@ -45,10 +45,12 @@ function buildSecurityMetaPlugin(): Plugin {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   base: process.env.VITE_BASE || '/GamesEduReinoTabuada/',
   define: {
-    __SOURCE_URL__: JSON.stringify(resolveSourceUrl()),
+    // Only builds resolve the exact revision (and may warn about uncommitted
+    // changes); dev server and tests link to the repository.
+    __SOURCE_URL__: JSON.stringify(command === 'build' ? resolveSourceUrl() : resolveSourceUrl({})),
   },
   plugins: [react(), tailwindcss(), buildSecurityMetaPlugin(), licenseFilesPlugin(), offlinePlugin()],
-});
+}));
