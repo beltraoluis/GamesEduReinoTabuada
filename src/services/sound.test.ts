@@ -138,6 +138,43 @@ describe('SoundManager persistence', () => {
   });
 });
 
+describe('SoundManager music visibility', () => {
+  it('pauses in the background and resumes a requested loop only once', async () => {
+    vi.useFakeTimers();
+    stubWindow();
+    window.AudioContext = class {} as typeof AudioContext;
+    const page = Object.assign(new EventTarget(), { visibilityState: 'visible' });
+    vi.stubGlobal('document', page);
+    const changeVisibility = (state: string) => {
+      page.visibilityState = state;
+      page.dispatchEvent(new Event('visibilitychange'));
+    };
+    const sm = await load();
+    changeVisibility('visible');
+    expect(vi.getTimerCount()).toBe(0);
+    sm.startMusic();
+    sm.startMusic();
+    expect(vi.getTimerCount()).toBe(1);
+    changeVisibility('hidden');
+    expect(vi.getTimerCount()).toBe(0);
+    changeVisibility('visible');
+    changeVisibility('visible');
+    expect(vi.getTimerCount()).toBe(1);
+    changeVisibility('hidden');
+    sm.toggleMusic();
+    changeVisibility('visible');
+    expect(vi.getTimerCount()).toBe(0);
+    changeVisibility('hidden');
+    sm.toggleMusic();
+    expect(vi.getTimerCount()).toBe(0);
+    changeVisibility('visible');
+    expect(vi.getTimerCount()).toBe(1);
+    sm.stopMusic();
+    changeVisibility('visible');
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
 describe('SoundManager.speak', () => {
   it('speaks genericText (not the name) when no voices are available', async () => {
     const synth = makeSynth([]);

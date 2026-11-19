@@ -27,10 +27,14 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   // Listen for Space or Enter to quickly start the main adventure
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.code === 'Space' || e.code === 'Enter') {
-        soundManager.playCorrect();
-        onStartAdventure(WORLDS[0]);
-      }
+      if (e.code !== 'Space' && e.code !== 'Enter') return;
+      // Only act as a shortcut when nothing interactive has focus, so Enter/Space
+      // still activate the focused button or link (e.g. the source-code link).
+      const target = e.target as HTMLElement | null;
+      if (e.repeat || e.defaultPrevented || target?.closest('button, a, input, textarea, select, [contenteditable="true"]')) return;
+      e.preventDefault();
+      soundManager.playCorrect();
+      onStartAdventure(WORLDS[0]);
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
@@ -168,7 +172,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
               y="102"
               textAnchor="middle"
               dominantBaseline="central"
-              fontFamily="'Nunito', sans-serif"
+              fontFamily="'Nunito Variable', 'Nunito', sans-serif"
               fontSize="15"
               fontWeight="900"
               letterSpacing="1.5"

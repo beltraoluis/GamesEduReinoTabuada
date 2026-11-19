@@ -47,6 +47,12 @@ export const BalloonPopGame: React.FC<BalloonPopGameProps> = ({ onBack, onFinish
   const [wrongAnswers, setWrongAnswers] = useState<number>(0);
   const [speedToast, setSpeedToast] = useState<string | null>(null);
 
+  const playfieldRef = useRef<HTMLDivElement>(null);
+  const balloonNodes = useRef(new Map<string, HTMLButtonElement>());
+  const positions = useRef(new Map<string, number>());
+  const toastTimeout = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(toastTimeout.current), []);
+
   const requestRef = useRef<number | null>(null);
   const questionStartTimeRef = useRef<number>(performance.now());
   const rawGemsRef = useRef<number>(0);
@@ -102,30 +108,29 @@ export const BalloonPopGame: React.FC<BalloonPopGameProps> = ({ onBack, onFinish
   useEffect(() => {
     if (isGameOver) return;
 
+    positions.current.clear();
     let last = performance.now();
     const updateBalloons = (now: number) => {
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
 
-      setBalloons((prev) => {
-        return prev.map((b) => {
-          let nextY = b.y + b.speed * dt;
-          // Wrap around if it floats above top
-          if (nextY > 105) {
-            nextY = -15;
-          }
-          return { ...b, y: nextY };
-        });
-      });
+      const height = playfieldRef.current?.clientHeight ?? 0;
+      for (const balloon of balloons) {
+        const y = (positions.current.get(balloon.id) ?? balloon.y) + balloon.speed * dt;
+        const nextY = y > 105 ? -15 : y;
+        positions.current.set(balloon.id, nextY);
+        const node = balloonNodes.current.get(balloon.id);
+        if (node) node.style.transform = `translateY(${(balloon.y - nextY) * height / 100}px)`;
+      }
 
       requestRef.current = requestAnimationFrame(updateBalloons);
     };
 
     requestRef.current = requestAnimationFrame(updateBalloons);
     return () => {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      if (requestRef.current !== null) cancelAnimationFrame(requestRef.current);
     };
-  }, [isGameOver]);
+  }, [isGameOver, balloons]);
 
   // Click / Pop handler
   const handlePopBalloon = (balloon: Balloon) => {
@@ -135,9 +140,10 @@ export const BalloonPopGame: React.FC<BalloonPopGameProps> = ({ onBack, onFinish
     if (balloon.value === question.result) {
       soundManager.playCorrect();
       confetti({
+        disableForReducedMotion: true,
         particleCount: 20,
         spread: 60,
-        origin: { x: balloon.x / 100, y: (100 - balloon.y) / 100 },
+        origin: { x: balloon.x / 100, y: (100 - (positions.current.get(balloon.id) ?? balloon.y)) / 100 },
       });
 
       const newCombo = combo + 1;
@@ -158,7 +164,8 @@ export const BalloonPopGame: React.FC<BalloonPopGameProps> = ({ onBack, onFinish
       setTotalPopped((prev) => prev + 1);
 
       setSpeedToast(speedBonus > 0 ? `⚡ Rápido! +${points} pts · +💎` : `+${points} pts · +💎`);
-      setTimeout(() => setSpeedToast(null), 900);
+      window.clearTimeout(toastTimeout.current);
+      toastTimeout.current = window.setTimeout(() => setSpeedToast(null), 900);
 
       // Next Question
       setQuestion((prev) =>
@@ -252,7 +259,7 @@ export const BalloonPopGame: React.FC<BalloonPopGameProps> = ({ onBack, onFinish
               <Volume2 className="w-5 h-5" />
             </button>
             {combo > 1 && (
-              <span className="bg-amber-100 text-amber-800 font-black text-xs px-2.5 py-1 rounded-full animate-bounce">
+              <span className="bg-amber-100 text-amber-800 font-black text-xs px-2.5 py-1 rounded-full animate-bounce motion-reduce:animate-none!">
                 🔥 {combo}x Combo!
               </span>
             )}
@@ -261,18 +268,18 @@ export const BalloonPopGame: React.FC<BalloonPopGameProps> = ({ onBack, onFinish
       </div>
 
       {/* Balloons Playfield */}
-      <div className="relative flex-1 w-full overflow-hidden">
+      <div ref={playfieldRef} className="relative flex-1 w-full overflow-hidden">
         {speedToast && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-yellow-300 text-yellow-950 font-black text-lg px-4 py-1 rounded-full shadow-lg border-2 border-white animate-bounce pointer-events-none">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-yellow-300 text-yellow-950 font-black text-lg px-4 py-1 rounded-full shadow-lg border-2 border-white animate-bounce motion-reduce:animate-none! pointer-events-none">
             {speedToast}
           </div>
         )}
         {/* Scenery clouds */}
-        <div className="absolute top-10 left-12 text-6xl opacity-30 select-none animate-float pointer-events-none">
+        <div className="absolute top-10 left-12 text-6xl opacity-30 select-none animate-float motion-reduce:animate-none! pointer-events-none">
           ☁️
         </div>
         <div
-          className="absolute top-28 right-16 text-5xl opacity-30 select-none animate-float pointer-events-none"
+          className="absolute top-28 right-16 text-5xl opacity-30 select-none animate-float motion-reduce:animate-none! pointer-events-none"
           style={{ animationDelay: '1.2s' }}
         >
           ☁️
@@ -282,12 +289,16 @@ export const BalloonPopGame: React.FC<BalloonPopGameProps> = ({ onBack, onFinish
         {balloons.map((balloon) => (
           <button
             key={balloon.id}
+            ref={(node) => {
+              if (node) balloonNodes.current.set(balloon.id, node);
+              else balloonNodes.current.delete(balloon.id);
+            }}
             onClick={() => handlePopBalloon(balloon)}
             style={{
               left: `${balloon.x}%`,
               bottom: `${balloon.y}%`,
             }}
-            className={`absolute -translate-x-1/2 flex flex-col items-center group cursor-pointer transition-transform hover:scale-110 active:scale-90`}
+            className={`absolute -translate-x-1/2 flex flex-col items-center group cursor-pointer transition-[scale] hover:scale-110 active:scale-90`}
           >
             {/* Balloon Body */}
             <div

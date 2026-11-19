@@ -96,6 +96,26 @@ VITE_BASE=/ bun run build
 
 Não é preciso criar nenhum arquivo `.env`.
 
+### Modo offline
+
+O build gera um service worker (`dist/sw.js`, criado por `scripts/vite-plugins.ts`) que guarda o jogo inteiro (todos os modos, fontes e ícones) na primeira visita. Depois disso o jogo abre sem internet e pode ser instalado como aplicativo pelo navegador (`public/manifest.webmanifest`). O progresso continua salvo no `localStorage` do aparelho.
+
+Uma versão nova é baixada em segundo plano e passa a valer quando todas as abas ou janelas do jogo forem fechadas e abertas de novo. O service worker só é registrado no build de produção; o `bun run dev` não usa cache offline.
+
 ## Licença
 
-Distribuído sob a licença MIT. Veja o arquivo [LICENSE](LICENSE).
+Copyright © 2026 Luis Henrique Coutinho Beltrao.
+
+Este programa é software livre: distribuído sob a **GNU Affero General Public License, versão 3** (`AGPL-3.0-only`). Veja o texto completo em [LICENSE](LICENSE).
+
+A AGPL exige que quem disponibiliza o jogo a outras pessoas, inclusive pela rede, ofereça o código-fonte correspondente. O rodapé do jogo traz o link **Código-fonte desta versão**, que no deploy aponta para o commit publicado (`GITHUB_REPOSITORY`/`GITHUB_SHA`). Fora do Actions o link usa o commit local (`git rev-parse HEAD`); quem publicar um fork deve definir `VITE_SOURCE_URL` com o endereço do próprio código:
+
+```sh
+VITE_SOURCE_URL=https://example.org/meu-fork bun run build
+```
+
+O build também publica `LICENSE.txt` e `THIRD-PARTY-NOTICES.txt` com as licenças das dependências incluídas no jogo (React, React DOM e o reset de CSS do Tailwind: MIT; canvas-confetti e Lucide: ISC; fontes Fredoka e Nunito: SIL OFL 1.1).
+
+As ilustrações em SVG de `src/assets/` foram geradas com auxílio de inteligência artificial e são distribuídas sob a mesma licença, na medida em que forem protegidas por direito autoral.
+
+Versões publicadas antes desta mudança continuam disponíveis sob a licença MIT em que foram distribuídas.

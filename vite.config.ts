@@ -1,6 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
+import { licenseFilesPlugin, offlinePlugin, resolveSourceUrl } from './scripts/vite-plugins.ts';
 
 const CSP_CONTENT = [
   "default-src 'self'",
@@ -12,7 +13,8 @@ const CSP_CONTENT = [
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'none'",
-  'worker-src blob:',
+  // 'self' allows the offline service worker (sw.js) to register.
+  "worker-src 'self' blob:",
   'child-src blob:',
 ].join('; ') + ';';
 
@@ -45,5 +47,8 @@ function buildSecurityMetaPlugin(): Plugin {
 
 export default defineConfig({
   base: process.env.VITE_BASE || '/GamesEduReinoTabuada/',
-  plugins: [react(), tailwindcss(), buildSecurityMetaPlugin()],
+  define: {
+    __SOURCE_URL__: JSON.stringify(resolveSourceUrl()),
+  },
+  plugins: [react(), tailwindcss(), buildSecurityMetaPlugin(), licenseFilesPlugin(), offlinePlugin()],
 });

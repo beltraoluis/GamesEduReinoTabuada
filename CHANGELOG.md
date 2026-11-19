@@ -4,6 +4,23 @@ Todas as mudanças notáveis neste projeto são documentadas neste arquivo.
 
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- Modo offline: um service worker gerado no build (`scripts/vite-plugins.ts`) guarda o jogo inteiro na primeira visita, com cache próprio por endereço de publicação e sem mascarar erros 404, e o manifesto com ícones permite instalar o jogo como aplicativo.
+- Rodapé com os links "Código-fonte desta versão" (commit publicado; em build local, o `origin` no HEAD com aviso se houver mudanças sem commit; ou `VITE_SOURCE_URL`) e "Licenças", e build publicando `LICENSE.txt` e `THIRD-PARTY-NOTICES.txt` com as licenças das dependências incluídas no build (inclusive o reset de CSS do Tailwind).
+
+### Changed
+- Licença do projeto alterada de MIT para GNU AGPL v3 (`AGPL-3.0-only`) em `LICENSE`, `package.json` e `README.md`.
+- Fonte Nunito trocada pela versão variável (`@fontsource-variable/nunito`): um único arquivo de 39 kB substitui os quatro pesos (66 kB) baixados ao abrir o jogo.
+- Os balões e portais passaram a se mover sem renderizar a tela inteira a cada quadro, e o contador da corrida só é atualizado quando o segundo exibido muda.
+- Balões, corrida e caldeirão respeitam a preferência por movimento reduzido nos efeitos decorativos e confetes, e cancelam os temporizadores ao sair.
+- A música pausa quando a aba fica oculta e volta quando ela é reaberta, se estiver ligada.
+- A checagem de tamanho do build (`check:bundle`) também mede o CSS e as fontes latinas.
+
+### Fixed
+- Enter e Espaço na tela inicial só iniciam a aventura quando nenhum botão ou link está em foco, para não atropelar a ativação pelo teclado.
+
 ## [2026-11-17]
 
 ### Added
