@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Volume2, Sparkles, Wand2, CheckCircle2, RotateCcw } from 'lucide-react';
 import { generateQuestion } from '../services/mathEngine';
 import { gemsForFreePlayCorrectAnswer, finalizeFreePlayGems } from '../services/rewards';
@@ -37,12 +37,16 @@ export const PotionCauldronGame: React.FC<PotionCauldronGameProps> = ({ onBack, 
   const rawGemsRef = useRef<number>(0);
   const wrongAnswersRef = useRef<number>(0);
 
+  const nextQuestionTimeout = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(nextQuestionTimeout.current), []);
+
   const handleSelectOption = (val: number) => {
     if (bubbles || showSummary) return;
     if (val === question.result) {
       soundManager.playCorrect();
       setBubbles(true);
       confetti({
+        disableForReducedMotion: true,
         particleCount: 40,
         spread: 70,
         origin: { y: 0.6 },
@@ -69,7 +73,7 @@ export const PotionCauldronGame: React.FC<PotionCauldronGameProps> = ({ onBack, 
         })`
       );
 
-      setTimeout(() => {
+      nextQuestionTimeout.current = window.setTimeout(() => {
         setBubbles(false);
         setFeedback(null);
         setSelectedIngredient(INGREDIENTS[Math.floor(Math.random() * INGREDIENTS.length)]);
@@ -97,9 +101,9 @@ export const PotionCauldronGame: React.FC<PotionCauldronGameProps> = ({ onBack, 
   return (
     <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 bg-gradient-to-b from-indigo-900 via-purple-900 to-slate-900 rounded-3xl shadow-2xl border-4 border-purple-400 text-white relative overflow-hidden">
       {/* Decorative stars in background */}
-      <div className="absolute top-28 left-6 text-2xl animate-pulse pointer-events-none" aria-hidden="true">✨</div>
-      <div className="absolute top-32 right-10 text-xl animate-pulse pointer-events-none" style={{ animationDelay: '1s' }} aria-hidden="true">⭐</div>
-      <div className="absolute bottom-12 left-10 text-3xl animate-pulse" style={{ animationDelay: '1.5s' }}>🔮</div>
+      <div className="absolute top-28 left-6 text-2xl animate-pulse motion-reduce:animate-none! pointer-events-none" aria-hidden="true">✨</div>
+      <div className="absolute top-32 right-10 text-xl animate-pulse motion-reduce:animate-none! pointer-events-none" style={{ animationDelay: '1s' }} aria-hidden="true">⭐</div>
+      <div className="absolute bottom-12 left-10 text-3xl animate-pulse motion-reduce:animate-none!" style={{ animationDelay: '1.5s' }}>🔮</div>
 
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-purple-700/50">
@@ -168,7 +172,7 @@ export const PotionCauldronGame: React.FC<PotionCauldronGameProps> = ({ onBack, 
       <div className="flex flex-col items-center justify-center my-4 relative">
         {/* Bubbles animation */}
         {bubbles && (
-          <div className="absolute -top-12 flex gap-4 text-3xl animate-bounce">
+          <div className="absolute -top-12 flex gap-4 text-3xl animate-bounce motion-reduce:animate-none!">
             <span>✨</span>
             <span>🌈</span>
             <span>🔮</span>
@@ -192,7 +196,7 @@ export const PotionCauldronGame: React.FC<PotionCauldronGameProps> = ({ onBack, 
         </div>
 
         {feedback && (
-          <div className="mt-3 text-center text-sm font-black text-yellow-300 animate-pulse bg-purple-950/80 px-4 py-1.5 rounded-full border border-purple-500">
+          <div className="mt-3 text-center text-sm font-black text-yellow-300 animate-pulse motion-reduce:animate-none! bg-purple-950/80 px-4 py-1.5 rounded-full border border-purple-500">
             {feedback}
           </div>
         )}

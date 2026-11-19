@@ -1,7 +1,7 @@
 {
   "name": "reino-da-tabuada-magica",
   "private": true,
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
@@ -16,8 +16,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fontsource-variable/nunito": "^5.3.0",
     "@fontsource/fredoka": "^5.3.0",
-    "@fontsource/nunito": "^5.3.0",
     "canvas-confetti": "^1.9.4",
     "lucide-react": "^0.546.0",
     "react": "^19.0.1",

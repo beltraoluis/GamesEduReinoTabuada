@@ -260,7 +260,17 @@ class SoundManager {
 
   // Procedural soft background ambient tune
   public startMusic() {
-    if (this.isMusicMuted || this.musicInterval) return;
+    if (this.isMusicMuted || typeof document === 'undefined') return;
+    document.addEventListener('visibilitychange', this.syncMusicVisibility);
+    this.syncMusicVisibility();
+  }
+
+  private syncMusicVisibility = () => {
+    if (document.visibilityState === 'hidden') {
+      this.clearMusicInterval();
+      return;
+    }
+    if (this.musicInterval !== null) return;
     try {
       this.initContext();
       const scale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25]; // C major pentatonic
@@ -294,10 +304,17 @@ class SoundManager {
     } catch {
       // Audio fallback
     }
-  }
+  };
 
   public stopMusic() {
-    if (this.musicInterval) {
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.syncMusicVisibility);
+    }
+    this.clearMusicInterval();
+  }
+
+  private clearMusicInterval() {
+    if (this.musicInterval !== null) {
       clearInterval(this.musicInterval);
       this.musicInterval = null;
     }

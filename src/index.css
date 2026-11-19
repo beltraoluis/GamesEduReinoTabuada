@@ -2,7 +2,7 @@
 
 @layer base {
   body {
-    font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+    font-family: 'Nunito Variable', 'Nunito', system-ui, -apple-system, sans-serif;
     user-select: none;
     -webkit-user-select: none;
     touch-action: manipulation;
@@ -89,6 +89,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Decorative loops (float, pulse, bounce, wiggle, ping, spin) stop for everyone
+     who asked the system for less motion, on every screen. */
+  [class*='animate-']:not(.wardrobe-name-error) {
+    animation: none !important;
+  }
+
   .wardrobe-name-error {
     animation-duration: 1ms;
   }

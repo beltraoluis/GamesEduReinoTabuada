@@ -106,6 +106,7 @@ export const VisualLab: React.FC<VisualLabProps> = ({ onBack, onExploreAchieveme
     soundManager.playCorrect();
     setShowFlashAnswer(true);
     confetti({
+      disableForReducedMotion: true,
       particleCount: 30,
       spread: 45,
       origin: { y: 0.7 },

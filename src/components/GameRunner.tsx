@@ -41,7 +41,10 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [isVictory, setIsVictory] = useState<boolean>(false);
   const [showHelperFeedback, setShowHelperFeedback] = useState<string | null>(null);
-  const [distanceToGate, setDistanceToGate] = useState<number>(100); // 100% down to 0%
+  const [gatesWaiting, setGatesWaiting] = useState(false);
+  const gateRow = useRef<HTMLDivElement>(null);
+  const shakeTimeout = useRef<number | undefined>(undefined);
+  const praiseTimeout = useRef<number | undefined>(undefined);
   const [isPaused, setIsPaused] = useState<boolean>(false);
 
   // Screen shake and feedback animations
@@ -65,9 +68,21 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
   const rawGemsRef = useRef<number>(0);
   const wrongAnswersRef = useRef<number>(0);
 
+  const positionGates = useCallback((distance: number) => {
+    distanceToGateRef.current = distance;
+    const row = gateRow.current;
+    if (!row) return;
+    const height = Math.max(12, ((distance - 5) / 95) * 255);
+    row.style.transform = `translateY(-${height}px)`;
+    const scale = 0.65 + Math.min(1, Math.max(0, (100 - distance) / 86)) * 0.35;
+    row.style.setProperty('--gate-scale', String(scale));
+  }, []);
+
   // Clean up return timeout on unmount
   useEffect(() => {
     return () => {
+      window.clearTimeout(shakeTimeout.current);
+      window.clearTimeout(praiseTimeout.current);
       if (returnTimeoutRef.current !== null) {
         clearTimeout(returnTimeoutRef.current);
       }
@@ -77,8 +92,8 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
   // Read question with speech synthesis when question changes and ensure clean selection state
   useEffect(() => {
     soundManager.speak(currentQuestion.speechText);
-    distanceToGateRef.current = 100;
-    setDistanceToGate(100);
+    positionGates(100);
+    setGatesWaiting(false);
     setPlayerLane(null); // Always clear previous selection on new question!
     roundTimerRef.current = ROUND_TIMER_SECONDS;
     timeoutTriggeredRef.current = false;
@@ -87,7 +102,7 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
     speedBonusRef.current = 0;
     isRetryRoundRef.current = false;
     setRoundTimer(ROUND_TIMER_SECONDS);
-  }, [currentQuestion]);
+  }, [currentQuestion, positionGates]);
 
   // Smoothly return mascot to right corner, then advance to the next question or retry the current one
   const returnMascotThenAdvance = useCallback(
@@ -100,8 +115,8 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
       }
 
       returnTimeoutRef.current = window.setTimeout(() => {
-        distanceToGateRef.current = 100;
-        setDistanceToGate(100);
+        positionGates(100);
+        setGatesWaiting(false);
         roundTimerRef.current = ROUND_TIMER_SECONDS;
         timeoutTriggeredRef.current = false;
         questionStartTimeRef.current = performance.now();
@@ -119,7 +134,7 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
         returnTimeoutRef.current = null;
       }, 650);
     },
-    [world.tables]
+    [world.tables, positionGates]
   );
 
   // Capture speed bonus at the moment the player picks a lane
@@ -199,7 +214,8 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
   const handleTimeUp = useCallback(() => {
     soundManager.playWrong();
     setShake(true);
-    setTimeout(() => setShake(false), 400);
+    window.clearTimeout(shakeTimeout.current);
+    shakeTimeout.current = window.setTimeout(() => setShake(false), 400);
     setStreak(0);
     const nextWrong = wrongAnswersRef.current + 1;
     wrongAnswersRef.current = nextWrong;
@@ -254,9 +270,11 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
             ? `${basePraise} +${points} pts ⚡ · ${gemLabel}`
             : `${basePraise} +${points} pts · ${gemLabel}`;
         setPraiseText(fullPraise);
-        setTimeout(() => setPraiseText(null), 1200);
+        window.clearTimeout(praiseTimeout.current);
+        praiseTimeout.current = window.setTimeout(() => setPraiseText(null), 1200);
 
         confetti({
+          disableForReducedMotion: true,
           particleCount: 25,
           spread: 50,
           origin: { y: 0.65 },
@@ -269,6 +287,7 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
           setIsVictory(true);
           soundManager.playVictory();
           confetti({
+            disableForReducedMotion: true,
             particleCount: 100,
             spread: 90,
             origin: { y: 0.5 },
@@ -281,7 +300,8 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
         // Wrong answer
         soundManager.playWrong();
         setShake(true);
-        setTimeout(() => setShake(false), 400);
+        window.clearTimeout(shakeTimeout.current);
+        shakeTimeout.current = window.setTimeout(() => setShake(false), 400);
         setStreak(0);
         const nextWrong = wrongAnswersRef.current + 1;
         wrongAnswersRef.current = nextWrong;
@@ -315,12 +335,12 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
 
         if (playerLane === null && prevDistance <= 14) {
           // Portals reached the end of the track — keep them there and start/continue the 5s timer!
-          distanceToGateRef.current = 14;
-          setDistanceToGate(14);
 
           if (!timeoutTriggeredRef.current) {
+            const previousSecond = Math.ceil(roundTimerRef.current);
             roundTimerRef.current = Math.max(0, roundTimerRef.current - delta);
-            setRoundTimer(roundTimerRef.current);
+            const second = Math.ceil(roundTimerRef.current);
+            if (second !== previousSecond) setRoundTimer(second);
             if (roundTimerRef.current <= 0) {
               timeoutTriggeredRef.current = true;
               handleTimeUp();
@@ -332,21 +352,20 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
 
           if (playerLane === null && nextDistance <= 14) {
             nextDistance = 14;
+            setGatesWaiting(true);
           } else if (playerLane !== null && nextDistance <= 5) {
             // Ensure mascot has finished sliding to the lane (~480ms) before evaluating
             const elapsedSinceSelect = performance.now() - lastSelectTimeRef.current;
             if (elapsedSinceSelect < 480) {
               nextDistance = 6;
             } else {
-              distanceToGateRef.current = 5;
-              setDistanceToGate(5);
+              positionGates(5);
               evaluateAnswer(playerLane);
               return;
             }
           }
 
-          distanceToGateRef.current = nextDistance;
-          setDistanceToGate(nextDistance);
+          positionGates(nextDistance);
         }
       }
       lastTimeRef.current = time;
@@ -355,10 +374,10 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
 
     requestRef.current = requestAnimationFrame(animateLoop);
     return () => {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      if (requestRef.current !== null) cancelAnimationFrame(requestRef.current);
       lastTimeRef.current = null;
     };
-  }, [evaluateAnswer, handleTimeUp, isGameOver, isPaused, isVictory, playerLane, roundPhase, showHelperFeedback]);
+  }, [evaluateAnswer, handleTimeUp, isGameOver, isPaused, isVictory, playerLane, positionGates, roundPhase, showHelperFeedback]);
 
   // Finish handlers
   const handleRestart = () => {
@@ -385,8 +404,8 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
     setIsGameOver(false);
     setIsVictory(false);
     setShowHelperFeedback(null);
-    distanceToGateRef.current = 100;
-    setDistanceToGate(100);
+    positionGates(100);
+    setGatesWaiting(false);
   };
 
   const projectedGems = finalizeGems(rawGems, wrongAnswers);
@@ -403,7 +422,7 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
   return (
     <div
       className={`relative w-full max-w-4xl mx-auto h-[620px] rounded-3xl overflow-hidden shadow-2xl border-4 border-amber-300 flex flex-col bg-gradient-to-b ${world.themeColor} ${
-        shake ? 'animate-wiggle' : ''
+        shake ? 'animate-wiggle motion-reduce:animate-none!' : ''
       }`}
     >
       {/* Top HUD Cluster */}
@@ -441,7 +460,7 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
           </div>
 
           {streak > 1 && (
-            <div className="flex items-center gap-1 bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-black text-xs animate-bounce">
+            <div className="flex items-center gap-1 bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-black text-xs animate-bounce motion-reduce:animate-none!">
               <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
               <span>Combo {streak}x!</span>
             </div>
@@ -492,7 +511,7 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
 
       {/* Praise Floating text */}
       {praiseText && (
-        <div className="absolute top-28 left-1/2 -translate-x-1/2 z-40 bg-yellow-300 text-yellow-950 font-black text-2xl px-6 py-2 rounded-2xl shadow-xl animate-bounce border-2 border-white">
+        <div className="absolute top-28 left-1/2 -translate-x-1/2 z-40 bg-yellow-300 text-yellow-950 font-black text-2xl px-6 py-2 rounded-2xl shadow-xl animate-bounce motion-reduce:animate-none! border-2 border-white">
           {praiseText}
         </div>
       )}
@@ -501,11 +520,11 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
       <div className="relative flex-1 w-full overflow-hidden flex flex-col justify-end">
         {/* Animated Background clouds and scenery */}
         <div className="absolute inset-0 pointer-events-none opacity-40">
-          <div className="absolute top-6 left-10 text-4xl animate-float">☁️</div>
-          <div className="absolute top-14 right-16 text-3xl animate-float" style={{ animationDelay: '1.5s' }}>
+          <div className="absolute top-6 left-10 text-4xl animate-float motion-reduce:animate-none!">☁️</div>
+          <div className="absolute top-14 right-16 text-3xl animate-float motion-reduce:animate-none!" style={{ animationDelay: '1.5s' }}>
             ☁️
           </div>
-          <div className="absolute top-24 left-1/3 text-2xl animate-float" style={{ animationDelay: '0.8s' }}>
+          <div className="absolute top-24 left-1/3 text-2xl animate-float motion-reduce:animate-none!" style={{ animationDelay: '0.8s' }}>
             ⭐
           </div>
         </div>
@@ -523,13 +542,13 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
               </div>
 
               {/* Centered Yellow Counter Button/Pill in the middle of the screen — appears only when portals reach the bottom */}
-              {roundPhase === 'choosing' && playerLane === null && distanceToGate <= 14 && (
+              {roundPhase === 'choosing' && playerLane === null && gatesWaiting && (
                 <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none">
                   <div
                     className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-xl border-2 font-black text-sm whitespace-nowrap transition-colors ${
                       roundTimer <= 2
-                        ? 'bg-rose-500 border-white text-white animate-pulse'
-                        : 'bg-yellow-300 border-white text-yellow-950 animate-bounce'
+                        ? 'bg-rose-500 border-white text-white animate-pulse motion-reduce:animate-none!'
+                        : 'bg-yellow-300 border-white text-yellow-950 animate-bounce motion-reduce:animate-none!'
                     }`}
                   >
                     <span className="flex items-center gap-1 bg-white/80 text-slate-900 px-2 py-0.5 rounded-full tabular-nums">
@@ -544,19 +563,19 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
               {/* Approaching Gates (Portais Mágicos) — each descending cleanly in its own lane */}
               {roundPhase === 'choosing' && (
                 <div
-                  className="absolute inset-x-0 z-10 pointer-events-auto grid grid-cols-3 text-center"
+                  ref={gateRow}
+                  className="absolute bottom-0 inset-x-0 z-10 pointer-events-auto grid grid-cols-3 text-center"
                   style={{
-                    bottom: `${Math.max(12, ((distanceToGate - 5) / 95) * 255)}px`,
+                    transform: 'translateY(-255px)',
                   }}
                 >
                   {currentQuestion.options.map((option, idx) => {
                     const isSelected = playerLane === idx;
-                    const gateScale = 0.65 + Math.min(1, Math.max(0, (100 - distanceToGate) / 86)) * 0.35;
                     return (
                       <div key={idx} className="flex justify-center items-center px-1">
                         <button
                           onClick={() => chooseLane(idx)}
-                          style={{ transform: `scale(${gateScale})` }}
+                          style={{ transform: 'scale(var(--gate-scale, 0.65))' }}
                           className={`w-full p-3 rounded-2xl font-black text-2xl sm:text-3xl font-fun shadow-2xl border-4 transition-colors cursor-pointer origin-center ${
                             isSelected
                               ? 'bg-amber-400 border-white text-slate-900 ring-4 ring-yellow-300 shadow-amber-500/50'
@@ -589,11 +608,11 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
               }`}
             >
               {roundPhase === 'choosing' && playerLane === null && (
-                <span className="text-[11px] font-black bg-white/95 text-amber-900 px-2.5 py-0.5 rounded-full shadow-md border border-amber-300 mb-1 whitespace-nowrap animate-bounce">
+                <span className="text-[11px] font-black bg-white/95 text-amber-900 px-2.5 py-0.5 rounded-full shadow-md border border-amber-300 mb-1 whitespace-nowrap animate-bounce motion-reduce:animate-none!">
                   Qual portal? 🤔
                 </span>
               )}
-              <div className="animate-bounce">
+              <div className="animate-bounce motion-reduce:animate-none!">
                 <MascotBadge mascotId={mascotId} hatId={hatId} size="lg" />
               </div>
             </div>
@@ -643,7 +662,7 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
       {/* Educational Helper Feedback Modal on wrong answer */}
       {showHelperFeedback && (
         <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border-4 border-amber-400 text-center animate-bounce-short">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border-4 border-amber-400 text-center animate-bounce-short motion-reduce:animate-none!">
             <div className="text-5xl mb-2">🧚‍♀️</div>
             <h3 className="text-2xl font-black font-fun text-amber-900 mb-2">Quase lá, amiguinho!</h3>
             <p className="text-slate-700 font-semibold text-base mb-6 leading-relaxed bg-amber-50 p-4 rounded-2xl border border-amber-200">
@@ -700,7 +719,7 @@ export const GameRunner: React.FC<GameRunnerProps> = ({
       {isVictory && (
         <div className="absolute inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl border-4 border-yellow-400 relative overflow-hidden">
-            <div className="text-6xl mb-3 animate-bounce">🏆</div>
+            <div className="text-6xl mb-3 animate-bounce motion-reduce:animate-none!">🏆</div>
             <h3 className="text-3xl font-black font-fun text-yellow-950 mb-1">Vitória Espetacular!</h3>
             <p className="text-slate-600 font-bold mb-4">
               Você conquistou os desafios do <strong>{world.name}</strong>!

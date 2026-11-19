@@ -1,11 +1,15 @@
 import { gzipSync } from 'node:zlib';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join, relative, resolve, sep } from 'node:path';
+import { FONT_PATTERN } from './vite-plugins.ts';
 
 const outputDirectory = resolve(process.argv[2] ?? 'dist');
 const assetsDirectory = resolve(outputDirectory, 'assets');
 const initialGzipBudgetBytes = 105 * 1024;
 const totalGzipBudgetBytes = 150 * 1024;
+const cssGzipBudgetBytes = 20 * 1024;
+// Latin font subsets (WOFF2 is already compressed, so raw bytes are measured).
+const latinFontBudgetBytes = 110 * 1024;
 
 function getAttribute(tag: string, name: string): string | undefined {
   const match = tag.match(new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, 'i'));
@@ -25,12 +29,16 @@ function resolveAssetPath(url: string): string {
   return assetPath;
 }
 
-function findJavaScriptFiles(directory: string): string[] {
+function findFiles(directory: string, matches: (name: string) => boolean): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const entryPath = join(directory, entry.name);
-    if (entry.isDirectory()) return findJavaScriptFiles(entryPath);
-    return entry.isFile() && entry.name.endsWith('.js') ? [entryPath] : [];
+    if (entry.isDirectory()) return findFiles(entryPath, matches);
+    return entry.isFile() && matches(entry.name) ? [entryPath] : [];
   });
+}
+
+function findJavaScriptFiles(directory: string): string[] {
+  return findFiles(directory, (name) => name.endsWith('.js'));
 }
 
 function measure(files: string[]) {
@@ -82,6 +90,14 @@ console.log(`  gzip:     ${formatBytes(initial.gzipBytes)}`);
 console.log('Total emitted JavaScript:');
 console.log(`  minified: ${formatBytes(total.rawBytes)}`);
 console.log(`  gzip:     ${formatBytes(total.gzipBytes)}`);
+const cssFiles = findFiles(assetsDirectory, (name) => name.endsWith('.css'));
+const css = measure(cssFiles);
+// Same selection the offline service worker precaches.
+const latinFontFiles = findFiles(assetsDirectory, (name) => FONT_PATTERN.test(name));
+const latinFontBytes = latinFontFiles.reduce((sum, file) => sum + statSync(file).size, 0);
+console.log(`CSS (${cssFiles.length} files):`);
+console.log(`  gzip:     ${formatBytes(css.gzipBytes)}`);
+console.log(`Latin WOFF2 fonts (${latinFontFiles.length} files): ${formatBytes(latinFontBytes)}`);
 console.log(`Initial files: ${initialFiles.map((file) => relative(outputDirectory, file)).join(', ')}`);
 console.log(`All chunks:   ${totalFiles.map((file) => basename(file)).join(', ')}`);
 
@@ -94,4 +110,10 @@ if (total.gzipBytes > totalGzipBudgetBytes) {
   throw new Error(
     `Total JavaScript gzip size ${total.gzipBytes} exceeds budget ${totalGzipBudgetBytes} bytes`,
   );
+}
+if (css.gzipBytes > cssGzipBudgetBytes) {
+  throw new Error(`CSS gzip size ${css.gzipBytes} exceeds budget ${cssGzipBudgetBytes} bytes`);
+}
+if (latinFontBytes > latinFontBudgetBytes) {
+  throw new Error(`Latin font size ${latinFontBytes} exceeds budget ${latinFontBudgetBytes} bytes`);
 }
